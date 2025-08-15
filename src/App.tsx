@@ -3,8 +3,7 @@ import ExampleComponent from './components/ExampleComponent';
 
 const App: React.FC = () => {
   return (
-    <div>
-      <h1>Welcome to My React PWA</h1>
+    <div>      
       <ExampleComponent />
     </div>
   );

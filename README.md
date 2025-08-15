@@ -1,11 +1,11 @@
-# My React PWA
+# DnD-Spellbook
 
 This is a Progressive Web App (PWA) built with React and TypeScript. It is designed to provide a seamless user experience and can be installed on devices for offline access.
 
 ## Project Structure
 
 ```
-my-react-pwa
+DnD-Spellbook
 ├── public
 │   ├── index.html        # Main HTML file
 │   ├── manifest.json     # PWA metadata
