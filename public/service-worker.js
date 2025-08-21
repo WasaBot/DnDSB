@@ -1,35 +1,52 @@
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open('my-pwa-cache').then((cache) => {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/manifest.json',
-        // Add other assets to cache here
-      ]);
+    caches.open('${CACHE_NAME}').then(cache => {
+      return cache.addAll(JSON.stringify(STATIC_ASSETS));
     })
   );
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
-});
-
-self.addEventListener('activate', (event) => {
-  const cacheWhitelist = ['my-pwa-cache'];
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(key => key !== '${CACHE_NAME}').map(key => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', event => {
+  const url = event.request.url;
+  // Cache spell API GET requests
+  if (url.startsWith('${SPELL_API_PREFIX}') && event.request.method === 'GET') {
+    event.respondWith(
+      caches.open('${CACHE_NAME}').then(async cache => {
+        const cached = await cache.match(event.request);
+        if (cached) return cached;
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            cache.put(event.request, response.clone());
           }
-        })
-      );
+          return response;
+        } catch (err) {
+          // If offline and not cached, return a fallback response
+          return new Response(JSON.stringify({ error: "Offline and not cached." }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      })
+    );
+    return;
+  }
+  // Cache static assets
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });

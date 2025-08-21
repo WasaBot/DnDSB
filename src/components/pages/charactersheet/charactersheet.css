@@ -1,0 +1,80 @@
+.charactersheet-spell-section {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.charactersheet-spelllevel-btn {
+  width: 100%;
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.charactersheet-spelllevel-checkboxes {
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.charactersheet-spelllevel-checkboxes label {
+  margin-right: 6px;
+}
+
+.charactersheet-spell-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+}
+
+.charactersheet-spell-listitem {
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.charactersheet-spell-row {
+  cursor: pointer;
+  background: #f7f7f7;
+  border-radius: 4px;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.charactersheet-spell-row span:last-child {
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+.charactersheet-spell-details {
+  background: #fff;
+  border: 1px solid #eee;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  padding: 8px 12px;
+}
+
+.charactersheet-rest-btns {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.charactersheet-rest-btn {
+  flex: 1;
+  background: #e0e0e0;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 8px 0;
+  font-weight: bold;
+  cursor: pointer;
+}

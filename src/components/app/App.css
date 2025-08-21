@@ -1,0 +1,47 @@
+.app-container {
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: sans-serif;
+  background: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-nav {
+  display: flex;
+  justify-content: space-around;
+  background: #222;
+}
+
+.tab-nav button {
+  flex: 1;
+  padding: 1em;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tab-nav button.active,
+.tab-nav button:hover {
+  background: #444;
+}
+
+.tab-content {
+  flex: 1;
+  padding: 2em 1em;
+}
+
+/* Responsive for mobile */
+@media (max-width: 600px) {
+  .app-container {
+    max-width: 100vw;
+    padding: 0;
+  }
+  .tab-content {
+    padding: 1em 0.5em;
+  }
+}
