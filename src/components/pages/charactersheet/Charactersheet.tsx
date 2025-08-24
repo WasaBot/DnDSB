@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import { classToSlotsTable } from "../../../data/spellSlotsTables";
 import { groupAndSortSpells, convertRange } from "../../../data/spells";
@@ -46,16 +46,33 @@ function getSpellAttackBonus(character: any) {
   return getProficiencyBonus(character.level) + mod;
 }
 
+const USED_SLOTS_STORAGE_KEY = "usedSlots";
+
 // CharacterSheet component
 const CharacterSheet: React.FC = () => {
   const { unit, character } = useSettings();
   const isSpellcaster = !!classToSlotsTable[character.class];
   const [openSpell, setOpenSpell] = useState<string | null>(null);
   const [openLevels, setOpenLevels] = useState<Record<number, boolean>>({});
-  const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>({});
+  // Persist usedSlots in localStorage
+  const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>(() => {
+    try {
+      const saved = localStorage.getItem(USED_SLOTS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   // Concentration counter state
   const [showConcentration, setShowConcentration] = useState(false);
   const [concentrationCount, setConcentrationCount] = useState(0);
+
+  // Save usedSlots to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(USED_SLOTS_STORAGE_KEY, JSON.stringify(usedSlots));
+    } catch {}
+  }, [usedSlots]);
 
   // Get spell slots for the character's level and class
   const spellSlotsTable = classToSlotsTable[character.class] || {};
