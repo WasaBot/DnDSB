@@ -78,3 +78,316 @@
   font-weight: bold;
   cursor: pointer;
 }
+
+/* Concentration Counter Styles */
+.charactersheet-concentration-row {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.charactersheet-concentration-toggle {
+  background: #f7f7f7;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: background 0.2s;
+}
+.charactersheet-concentration-toggle.active {
+  background: #e0f7fa;
+}
+
+.charactersheet-concentration-counter {
+  background: #fffde7;
+  border: 1px solid #fbc02d;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.charactersheet-concentration-counter span {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+}
+
+.charactersheet-concentration-reset {
+  background: #ffebee;
+  border: 1px solid #e57373;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background 0.2s;
+}
+
+.charactersheet-concentration-reset:hover {
+  background: #f8d7da;
+}
+
+/* Spell Save DC Styles */
+.charactersheet-spell-save-dc {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.charactersheet-spell-save-dc label {
+  font-weight: bold;
+}
+
+.charactersheet-spell-save-dc input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.charactersheet-spell-save-dc .charactersheet-tooltip {
+  cursor: help;
+  display: inline-block;
+  position: relative;
+}
+
+.charactersheet-spell-save-dc .charactersheet-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+/* Spell Components Styles */
+.charactersheet-spell-components {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.charactersheet-spell-components label {
+  font-weight: bold;
+}
+
+.charactersheet-spell-components input {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.charactersheet-spell-components .charactersheet-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.charactersheet-spell-components .charactersheet-checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+.charactersheet-spell-components .charactersheet-checkbox label {
+  margin: 0;
+  font-weight: normal;
+}
+
+/* Spell Description Styles */
+.charactersheet-spell-description {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  white-space: pre-wrap;
+}
+
+.charactersheet-spell-description h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.charactersheet-spell-description p {
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.charactersheet-spell-description ul {
+  margin: 0 0 8px 0;
+  padding-left: 20px;
+}
+
+.charactersheet-spell-description li {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+/* Spell Level Indicator Styles */
+.charactersheet-spell-level-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot.level-1 {
+  background: #4caf50;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot.level-2 {
+  background: #2196f3;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot.level-3 {
+  background: #ff9800;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot.level-4 {
+  background: #f44336;
+}
+
+.charactersheet-spell-level-indicator .charactersheet-level-dot.level-5 {
+  background: #9c27b0;
+}
+
+/* Spell Casting Styles */
+.charactersheet-spell-casting {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.charactersheet-spell-casting label {
+  font-weight: bold;
+}
+
+.charactersheet-spell-casting select {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.charactersheet-spell-casting .charactersheet-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.charactersheet-spell-casting .charactersheet-radio-group label {
+  margin: 0;
+  font-weight: normal;
+}
+
+.charactersheet-spell-casting .charactersheet-radio-group input {
+  margin-right: 4px;
+}
+
+/* Spell Preparation Styles */
+.charactersheet-spell-preparation {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.charactersheet-spell-preparation label {
+  font-weight: bold;
+}
+
+.charactersheet-spell-preparation .charactersheet-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.charactersheet-spell-preparation .charactersheet-checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+.charactersheet-spell-preparation .charactersheet-checkbox label {
+  margin: 0;
+  font-weight: normal;
+}
+
+/* Spell Slot Tracker Styles */
+.charactersheet-spell-slot-tracker {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.charactersheet-spell-slot-tracker label {
+  font-weight: bold;
+}
+
+.charactersheet-spell-slot-tracker .charactersheet-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.charactersheet-spell-slot-tracker .charactersheet-slot input {
+  width: 40px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.charactersheet-spell-slot-tracker .charactersheet-slot .charactersheet-checkbox {
+  margin: 0;
+}
+
+/* General Tooltip Styles */
+.charactersheet-tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.charactersheet-tooltip .charactersheet-tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.charactersheet-tooltip:hover .charactersheet-tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}

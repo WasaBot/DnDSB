@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import { classToSlotsTable } from "../../../data/spellSlotsTables";
-import { exampleSpells, groupAndSortSpells, convertRange } from "../../../data/spells";
+import { groupAndSortSpells, convertRange } from "../../../data/spells";
 import "./charactersheet.css";
 
 const classSpellcastingAbility: Record<string, keyof typeof abilityModifiers> = {
@@ -48,23 +48,26 @@ function getSpellAttackBonus(character: any) {
 
 // CharacterSheet component
 const CharacterSheet: React.FC = () => {
-  const { unit, character, } = useSettings();
+  const { unit, character } = useSettings();
   const isSpellcaster = !!classToSlotsTable[character.class];
   const [openSpell, setOpenSpell] = useState<string | null>(null);
   const [openLevels, setOpenLevels] = useState<Record<number, boolean>>({});
   const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>({});
+  // Concentration counter state
+  const [showConcentration, setShowConcentration] = useState(false);
+  const [concentrationCount, setConcentrationCount] = useState(0);
 
   // Get spell slots for the character's level and class
   const spellSlotsTable = classToSlotsTable[character.class] || {};
   const spellSlots = spellSlotsTable[character.level] || [];
 
-  // Build spell list from character.spells
+  // Build spell list from character.spells (default empty)
   const characterSpellNames: string[] = Array.isArray(character.spells) ? character.spells : [];
 
-  // Try to find spell details from exampleSpells, otherwise fetch from API
+  // Use spells from character.spells and fetch from API if needed
   const [apiSpellDetails, setApiSpellDetails] = useState<Record<string, any>>({});
 
-  // Helper to fetch spell details from API if not in exampleSpells
+  // Helper to fetch spell details from API if not already fetched
   const fetchAndCacheSpell = async (spellName: string) => {
     if (apiSpellDetails[spellName]) return;
     const { fetchSpellByName } = await import("../../../api/spellsApi");
@@ -79,11 +82,7 @@ const CharacterSheet: React.FC = () => {
   // Memoized list of spell objects for the character
   const characterSpells = useMemo(() => {
     return characterSpellNames.map(name => {
-      const local = exampleSpells.find(s => s.name === name);
-      if (local) return local;
-      // If not in local, check if already fetched from API
       if (apiSpellDetails[name]) return apiSpellDetails[name];
-      // Otherwise, trigger fetch and return a placeholder
       fetchAndCacheSpell(name);
       return { name, description: "Loading...", level: 0, castingTime: "", range: "", components: "", duration: "" };
     });
@@ -141,6 +140,26 @@ const CharacterSheet: React.FC = () => {
       {isSpellcaster && (
         <>
           <h3>Spellcasting</h3>
+          {/* Concentration Counter */}
+          <div className="charactersheet-concentration-row">
+            <button
+              type="button"
+              className={`charactersheet-concentration-toggle${showConcentration ? " active" : ""}`}
+              onClick={() => setShowConcentration(v => !v)}
+            >
+              {showConcentration ? "Hide Concentration Counter" : "Show Concentration Counter"}
+            </button>
+            {showConcentration && (
+              <button
+                type="button"
+                className="charactersheet-concentration-counter"
+                onClick={() => setConcentrationCount(c => c + 1)}
+                title="Click to increase concentration count"
+              >
+                Concentration: {concentrationCount}
+              </button>
+            )}
+          </div>
           <ul>
             <li>
               <b>Spell Save DC:</b> {getSpellSaveDC(character)}
@@ -151,6 +170,15 @@ const CharacterSheet: React.FC = () => {
           </ul>
           <div className="charactersheet-spell-section">
             <h4>Available Spells</h4>
+            <div style={{float: "right", textAlign: "right", marginBottom: 10}}>
+              <p>Sorcery Points:</p>
+              <input type="checkbox" />
+              <input type="checkbox" />
+              <input type="checkbox" />
+              <input type="checkbox" />
+              <input type="checkbox" />
+              <input type="checkbox" />
+            </div>
             {/* Cantrips */}
             {groupedSpells[0] && (
               <div style={{marginBottom: 10, width: "100%"}}>
@@ -253,9 +281,6 @@ const CharacterSheet: React.FC = () => {
               <button
                 type="button"
                 className="charactersheet-rest-btn"
-                style={{
-                  opacity: character.class === "Warlock" ? 1 : 0.6
-                }}
                 onClick={handleShortRest}
               >
                 Short Rest

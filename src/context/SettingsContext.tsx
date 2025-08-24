@@ -26,7 +26,7 @@ export interface Character {
   intelligence: number;
   wisdom: number;
   charisma: number;
-  spells: string[]; // <-- Add this line
+  spells: string[];
 }
 
 type SettingsContextType = {
@@ -46,7 +46,7 @@ const defaultCharacter: Character = {
   intelligence: 16,
   wisdom: 10,
   charisma: 13,
-  spells: [], // <-- Add this line
+  spells: [],
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -54,6 +54,21 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [unit, setUnit] = useState<UnitType>("ft");
   const [character, setCharacter] = useState<Character>(defaultCharacter);
+
+  React.useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      const importStr = params.get("import");
+      if (importStr) {
+        try {
+          const decoded = decodeURIComponent(escape(atob(importStr.trim())));
+          const data = JSON.parse(decoded);
+          if (data.character) setCharacter(data.character);
+        } catch {
+          // eslint-disable-next-line no-console
+          console.error("Failed to import character from URL.");
+        }
+      }
+    }, []);
 
   return (
     <SettingsContext.Provider value={{ unit, setUnit, character, setCharacter }}>
