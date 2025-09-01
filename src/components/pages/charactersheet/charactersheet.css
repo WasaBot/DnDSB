@@ -391,3 +391,34 @@
   visibility: visible;
   opacity: 1;
 }
+
+.charactersheet-resources-section {
+  margin: 16px 0;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.charactersheet-resources-boxes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.charactersheet-resource-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.charactersheet-resources-info {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 8px;
+}

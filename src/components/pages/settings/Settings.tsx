@@ -1,14 +1,30 @@
-import React, { useState } from "react";
-import { useSettings, CharacterClass } from "../../../context/SettingsContext";
+import React, { useEffect, useState } from "react";
+import { useSettings } from "../../../context/SettingsContext";
 import "./settings.css";
-
-const classOptions: CharacterClass[] = [
-  "Barbarian", "Bard", "Cleric", "Druid", "Fighter", "Monk",
-  "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
-];
+import supabase from "../../../utils/supabase";
 
 const Settings: React.FC = () => {
   const { unit, setUnit, character, setCharacter } = useSettings();
+  const [classes, setClasses] = useState<any>(['']);
+
+  useEffect(() => {
+    const fetchRes = async () => {
+      const { data: classes, error } = await supabase
+      .from('classes')
+      .select('class_name');
+      
+      if (error) {
+        console.error('Error fetching classes:', error);
+        return;
+      }
+            
+      if (classes && classes.length > 0) {
+        setClasses(classes);
+      }
+    };
+
+    fetchRes().then((v) => console.log(JSON.stringify(v,null,2)));
+  }, []);
 
   // Save/Load state
   const [importString, setImportString] = useState("");
@@ -86,9 +102,10 @@ const Settings: React.FC = () => {
         </label>
         <label>
           Class:
+          
           <select name="class" value={character.class} onChange={handleChange}>
-            {classOptions.map(cls => (
-              <option key={cls} value={cls}>{cls}</option>
+            {classes.map((cls:{class_name: string}) => (
+              <option key={cls.class_name} value={cls.class_name}>{cls.class_name}</option>
             ))}
           </select>
         </label>

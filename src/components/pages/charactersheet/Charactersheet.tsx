@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import { classToSlotsTable } from "../../../data/spellSlotsTables";
 import { groupAndSortSpells, convertRange } from "../../../data/spells";
+import { fetchSpellByName } from "../../../api/spellsApi";
 import "./charactersheet.css";
 
 const classSpellcastingAbility: Record<string, keyof typeof abilityModifiers> = {
@@ -66,6 +67,14 @@ const CharacterSheet: React.FC = () => {
   // Concentration counter state
   const [showConcentration, setShowConcentration] = useState(false);
   const [concentrationCount, setConcentrationCount] = useState(0);
+  const [usedResources, setUsedResources] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`resources_${character.class}`);
+      return saved ? JSON.parse(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
 
   // Save usedSlots to localStorage on change
   useEffect(() => {
@@ -73,6 +82,13 @@ const CharacterSheet: React.FC = () => {
       localStorage.setItem(USED_SLOTS_STORAGE_KEY, JSON.stringify(usedSlots));
     } catch {}
   }, [usedSlots]);
+
+  // Add this useEffect after your other useEffects
+  useEffect(() => {
+    try {
+      localStorage.setItem(`resources_${character.class}`, JSON.stringify(usedResources));
+    } catch {}
+  }, [usedResources, character.class]);
 
   // Get spell slots for the character's level and class
   const spellSlotsTable = classToSlotsTable[character.class] || {};
@@ -87,7 +103,6 @@ const CharacterSheet: React.FC = () => {
   // Helper to fetch spell details from API if not already fetched
   const fetchAndCacheSpell = async (spellName: string) => {
     if (apiSpellDetails[spellName]) return;
-    const { fetchSpellByName } = await import("../../../api/spellsApi");
     try {
       const data = await fetchSpellByName(spellName);
       setApiSpellDetails(prev => ({ ...prev, [spellName]: data }));
@@ -126,16 +141,17 @@ const CharacterSheet: React.FC = () => {
     setOpenLevels(prev => ({ ...prev, [level]: !prev[level] }));
   };
 
-  // Handle long rest: reset all slots
+  // Handle long rest: reset all slots and resources
   const handleLongRest = () => {
     const reset: Record<number, boolean[]> = {};
     spellSlots.forEach((slots, i) => {
       if (slots > 0) reset[i + 1] = Array(slots).fill(false);
     });
     setUsedSlots(reset);
+    setUsedResources(0); // Reset resources
   };
 
-  // Handle short rest: reset warlock slots only
+  // Handle short rest: reset warlock slots and short-rest resources
   const handleShortRest = () => {
     if (character.class === "Warlock") {
       const reset: Record<number, boolean[]> = {};
@@ -187,15 +203,6 @@ const CharacterSheet: React.FC = () => {
           </ul>
           <div className="charactersheet-spell-section">
             <h4>Available Spells</h4>
-            <div style={{float: "right", textAlign: "right", marginBottom: 10}}>
-              <p>Sorcery Points:</p>
-              <input type="checkbox" />
-              <input type="checkbox" />
-              <input type="checkbox" />
-              <input type="checkbox" />
-              <input type="checkbox" />
-              <input type="checkbox" />
-            </div>
             {/* Cantrips */}
             {groupedSpells[0] && (
               <div style={{marginBottom: 10, width: "100%"}}>
@@ -303,7 +310,7 @@ const CharacterSheet: React.FC = () => {
                 Short Rest
               </button>
             </div>
-          </div>
+          </div>          
         </>
       )}
     </div>
