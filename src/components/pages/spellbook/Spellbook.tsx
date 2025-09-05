@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import { fetchSpellByName } from "../../../api/spellsApi";
+import React, { useState, useEffect, useRef, use } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
-
-const SPELL_LIST_API = "https://www.dnd5eapi.co/api/spells/";
+import { fetchSpellByIndex } from "../../../utils/dbFuncs";
+import supabase from "../../../utils/supabase";
 
 const Spellbook: React.FC = () => {
   const { character, setCharacter } = useSettings();
   const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<{name:string,index:string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [spell, setSpell] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,24 +16,31 @@ const Spellbook: React.FC = () => {
   const [showCharacterSpells, setShowCharacterSpells] = useState(false);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  // Fetch spell suggestions as user types
-  useEffect(() => {
-    if (!search) {
-      setSuggestions([]);
-      return;
-    }
-    setLoadingSuggestions(true);
-    fetch(`${SPELL_LIST_API}?name=${encodeURIComponent(search)}`)
-      .then(res => res.json())
-      .then(data => {
-        setSuggestions(data.results || []);
-        setShowSuggestions(true);
-      })
-      .catch(() => setSuggestions([]))
-      .finally(() => setLoadingSuggestions(false));
-  }, [search]);
+  const handleToggleCharacterSpell = (spellName: string) => {
+    setCharacter(prev => {
+      const spells: string[] = Array.isArray(prev.spellcasting?.spells) ? prev.spellcasting.spells : [];
+      if (spells.includes(spellName)) {
+        return { ...prev, spells: spells.filter((s: string) => s !== spellName) };
+      } else {
+        return { ...prev, spells: [...spells, spellName] };
+      }
+    });
+  };
 
-  // Fetch spell details when a suggestion is selected
+  useEffect(() => {
+    const fetchSuggestions = async (): Promise<any> => {
+    const { data, error } = await supabase
+      .from('spells')
+      .select('name,index');
+    if (error) {
+      throw new Error(error.message);
+    } else {
+      setSuggestions(data as any);
+    };
+  };
+  fetchSuggestions();
+  }, []);
+
   const handleSelectSuggestion = async (spellObj: any) => {
     setError(null);
     setSpell(null);
@@ -42,25 +48,13 @@ const Spellbook: React.FC = () => {
     setSearch(spellObj.name);
     setShowSuggestions(false);
     try {
-      const data = await fetchSpellByName(spellObj.name);
+      const data = await fetchSpellByIndex(spellObj.index);
       setSpell(data);
     } catch (err: any) {
       setError(err.message);
       setSpell(null);
     }
     setLoading(false);
-  };
-
-  // Add or remove spell from character's spell list
-  const handleToggleCharacterSpell = (spellName: string) => {
-    setCharacter(prev => {
-      const spells: string[] = Array.isArray(prev.spells) ? prev.spells : [];
-      if (spells.includes(spellName)) {
-        return { ...prev, spells: spells.filter((s: string) => s !== spellName) };
-      } else {
-        return { ...prev, spells: [...spells, spellName] };
-      }
-    });
   };
 
   // Remove spell from character's spell list
@@ -177,6 +171,7 @@ const Spellbook: React.FC = () => {
                 onChange={() => handleToggleCharacterSpell(spell.name)}
               />
               Add to character
+              {/* TODO: add  to character fixen */}
             </label>
           </div>
           <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>

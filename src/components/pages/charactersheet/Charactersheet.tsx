@@ -1,61 +1,46 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSettings } from "../../../context/SettingsContext";
-import { classToSlotsTable } from "../../../data/spellSlotsTables";
-import { groupAndSortSpells, convertRange } from "../../../data/spells";
-import { fetchSpellByName } from "../../../api/spellsApi";
-import "./charactersheet.css";
-
-const classSpellcastingAbility: Record<string, keyof typeof abilityModifiers> = {
-  Bard: "charisma",
-  Cleric: "wisdom",
-  Druid: "wisdom",
-  Sorcerer: "charisma",
-  Warlock: "charisma",
-  Wizard: "intelligence",
-  Paladin: "charisma",
-  Ranger: "wisdom"
-};
-
-const abilityModifiers = {
-  strength: (score: number) => Math.floor((score - 10) / 2),
-  dexterity: (score: number) => Math.floor((score - 10) / 2),
-  constitution: (score: number) => Math.floor((score - 10) / 2),
-  intelligence: (score: number) => Math.floor((score - 10) / 2),
-  wisdom: (score: number) => Math.floor((score - 10) / 2),
-  charisma: (score: number) => Math.floor((score - 10) / 2),
-};
-
-function getProficiencyBonus(level: number) {
-  return 2 + Math.floor((level - 1) / 4);
-}
-
-function getSpellAbilityMod(character: any) {
-  const ability = classSpellcastingAbility[character.class];
-  if (!ability) return null;
-  return abilityModifiers[ability](character[ability]);
-}
-
-function getSpellSaveDC(character: any) {
-  const mod = getSpellAbilityMod(character);
-  if (mod === null) return null;
-  return 8 + getProficiencyBonus(character.level) + mod;
-}
-
-function getSpellAttackBonus(character: any) {
-  const mod = getSpellAbilityMod(character);
-  if (mod === null) return null;
-  return getProficiencyBonus(character.level) + mod;
-}
+import BarbarianResources from "./classes/BarbarianResources";
+import BardResources from "./classes/BardResources";
+import ClericResources from "./classes/ClericResources";
+import DruidResources from "./classes/DruidResources";
+import FighterResources from "./classes/FighterResources";
+import MonkResources from "./classes/MonkResources";
+import PaladinResources from "./classes/PaladinResources";
+import RangerResources from "./classes/RangerResources";
+import RogueResources from "./classes/RogueResources";
+import SorcererResources from "./classes/SorcererResources";
+import WarlockResources from "./classes/WarlockResources";
+import WizardResources from "./classes/WizardResources";
+import { groupAndSortSpells } from "../../../utils/functions";
+import { fetchSpellByIndex, fetchSpellslots } from "../../../utils/dbFuncs";
+import { getSpellSaveDC, getSpellAttackBonus } from "../../../utils/characterFuncs";
 
 const USED_SLOTS_STORAGE_KEY = "usedSlots";
 
-// CharacterSheet component
 const CharacterSheet: React.FC = () => {
-  const { unit, character } = useSettings();
-  const isSpellcaster = !!classToSlotsTable[character.class];
+  const { character } = useSettings();
+  const ClassSpecificResources = (function () {
+    switch (character.class.name) {
+      case "Barbarian": return <BarbarianResources />;
+      case "Bard": return <BardResources />;
+      case "Cleric": return <ClericResources />;
+      case "Druid": return <DruidResources />;
+      case "Fighter": return <FighterResources />;
+      case "Monk": return <MonkResources />;
+      case "Paladin": return <PaladinResources />;
+      case "Ranger": return <RangerResources />;
+      case "Rogue": return <RogueResources />;
+      case "Sorcerer": return <SorcererResources />;
+      case "Warlock": return <WarlockResources />;
+      case "Wizard": return <WizardResources />;
+      default: return <RangerResources />;
+    }
+  });
+
+  // Spellcasting state
   const [openSpell, setOpenSpell] = useState<string | null>(null);
   const [openLevels, setOpenLevels] = useState<Record<number, boolean>>({});
-  // Persist usedSlots in localStorage
   const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>(() => {
     try {
       const saved = localStorage.getItem(USED_SLOTS_STORAGE_KEY);
@@ -64,96 +49,94 @@ const CharacterSheet: React.FC = () => {
       return {};
     }
   });
-  // Concentration counter state
-  const [showConcentration, setShowConcentration] = useState(false);
-  const [concentrationCount, setConcentrationCount] = useState(0);
+  const [showConcentration, setShowConcentration] = useState<boolean>(false);
+  const [concentrationCount, setConcentrationCount] = useState<number>(0);
   const [usedResources, setUsedResources] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(`resources_${character.class}`);
+      const saved = localStorage.getItem(`resources_${character.class.name}`);
       return saved ? JSON.parse(saved) : 0;
     } catch {
       return 0;
     }
   });
 
-  // Save usedSlots to localStorage on change
+  // Spell slots
+  const [spellSlots, setSpellSlots] = useState<number[] | null>(null);
+  useEffect(() => {
+    const loadSpellSlots = async () => {
+      const result = await fetchSpellslots(character);
+      console.log(result);
+      if (Array.isArray(result) && result.length > 0) {        
+        const slots = Object.values(result[0])[0] as number[];
+        setSpellSlots(slots);
+      } else {
+        setSpellSlots(null);
+      }
+    };
+    loadSpellSlots();
+  }, [character.level, character.class.name]);
+
   useEffect(() => {
     try {
       localStorage.setItem(USED_SLOTS_STORAGE_KEY, JSON.stringify(usedSlots));
     } catch {}
   }, [usedSlots]);
 
-  // Add this useEffect after your other useEffects
   useEffect(() => {
     try {
-      localStorage.setItem(`resources_${character.class}`, JSON.stringify(usedResources));
+      localStorage.setItem(`resources_${character.class.name}`, JSON.stringify(usedResources));
     } catch {}
-  }, [usedResources, character.class]);
+  }, [usedResources, character.class.name]);
 
-  // Get spell slots for the character's level and class
-  const spellSlotsTable = classToSlotsTable[character.class] || {};
-  const spellSlots = spellSlotsTable[character.level] || [];
-
-  // Build spell list from character.spells (default empty)
+  // Spells
   const characterSpellNames: string[] = Array.isArray(character.spells) ? character.spells : [];
-
-  // Use spells from character.spells and fetch from API if needed
   const [apiSpellDetails, setApiSpellDetails] = useState<Record<string, any>>({});
-
-  // Helper to fetch spell details from API if not already fetched
   const fetchAndCacheSpell = async (spellName: string) => {
     if (apiSpellDetails[spellName]) return;
     try {
-      const data = await fetchSpellByName(spellName);
+      const data = await fetchSpellByIndex(spellName);
       setApiSpellDetails(prev => ({ ...prev, [spellName]: data }));
     } catch {
       setApiSpellDetails(prev => ({ ...prev, [spellName]: { name: spellName, description: "Not found in API." } }));
     }
   };
-
-  // Memoized list of spell objects for the character
   const characterSpells = useMemo(() => {
-    return characterSpellNames.map(name => {
+    return characterSpellNames.map((name: string) => {
       if (apiSpellDetails[name]) return apiSpellDetails[name];
       fetchAndCacheSpell(name);
       return { name, description: "Loading...", level: 0, castingTime: "", range: "", components: "", duration: "" };
     });
     // eslint-disable-next-line
   }, [characterSpellNames, apiSpellDetails]);
-
-  // Only show spells that have a level property (API spells may not have it until loaded)
-  const filteredCharacterSpells = characterSpells.filter(s => typeof s.level === "number");
-
-  // Group and sort spells
+  const filteredCharacterSpells = characterSpells.filter((s: any) => typeof s.level === "number");
   const groupedSpells = groupAndSortSpells(filteredCharacterSpells);
 
-  // Handle spell slot checkbox toggle
+  // Spell slot checkbox toggle
   const handleSlotToggle = (level: number, idx: number) => {
     setUsedSlots(prev => {
-      const arr = prev[level] ? [...prev[level]] : Array(spellSlots[level - 1] || 0).fill(false);
+      const arr = prev[level] ? [...prev[level]] : Array(spellSlots?.[level - 1] || 0).fill(false);
       arr[idx] = !arr[idx];
       return { ...prev, [level]: arr };
     });
   };
-
-  // Handle spell level dropdown toggle
+  // Spell level dropdown toggle
   const handleLevelToggle = (level: number) => {
     setOpenLevels(prev => ({ ...prev, [level]: !prev[level] }));
   };
-
-  // Handle long rest: reset all slots and resources
+  // Long rest: reset all slots and resources
   const handleLongRest = () => {
-    const reset: Record<number, boolean[]> = {};
-    spellSlots.forEach((slots, i) => {
-      if (slots > 0) reset[i + 1] = Array(slots).fill(false);
-    });
-    setUsedSlots(reset);
-    setUsedResources(0); // Reset resources
+    if (spellSlots) {
+      const reset: Record<number, boolean[]> = {};
+      spellSlots.forEach((slots, i) => {
+        if (slots > 0) reset[i + 1] = Array(slots).fill(false);
+      });
+      setUsedSlots(reset);
+      setUsedResources(0);
+    }
   };
-
-  // Handle short rest: reset warlock slots and short-rest resources
+  // Short rest: reset warlock slots only
   const handleShortRest = () => {
-    if (character.class === "Warlock") {
+    if (character.class.name === "Warlock" && spellSlots) {
       const reset: Record<number, boolean[]> = {};
       spellSlots.forEach((slots, i) => {
         if (slots > 0) reset[i + 1] = Array(slots).fill(false);
@@ -167,13 +150,28 @@ const CharacterSheet: React.FC = () => {
       <h2>Character Sheet</h2>
       <p>
         <b>Name:</b> {character.name}<br />
-        <b>Class:</b> {character.class}<br />
+        <b>Class:</b> {character.class.name}<br />
         <b>Level:</b> {character.level}
       </p>
-      {isSpellcaster && (
-        <>
+
+      <div>
+        <h2>Class Resources</h2>
+        <ClassSpecificResources />
+      </div>
+
+      {/* Spellcasting UI */}
+      {character.class.spellcastingAbility && (
+        <div>
           <h3>Spellcasting</h3>
-          {/* Concentration Counter */}
+          <div><b>Spellcasting Attribute:</b> {character.class.spellcastingAbility || "Loading..."}</div>
+          <ul>
+            <li>
+              <b>Spell Save DC:</b> {getSpellSaveDC(character)}
+            </li>
+            <li>
+              <b>Spell Attack Bonus:</b> +{getSpellAttackBonus(character)}
+            </li>
+          </ul>
           <div className="charactersheet-concentration-row">
             <button
               type="button"
@@ -193,14 +191,6 @@ const CharacterSheet: React.FC = () => {
               </button>
             )}
           </div>
-          <ul>
-            <li>
-              <b>Spell Save DC:</b> {getSpellSaveDC(character)}
-            </li>
-            <li>
-              <b>Spell Attack Bonus:</b> +{getSpellAttackBonus(character)}
-            </li>
-          </ul>
           <div className="charactersheet-spell-section">
             <h4>Available Spells</h4>
             {/* Cantrips */}
@@ -215,14 +205,14 @@ const CharacterSheet: React.FC = () => {
                 </button>
                 {openLevels[0] && (
                   <ul className="charactersheet-spell-list">
-                    {groupedSpells[0].map(spell => (
+                    {groupedSpells[0].map((spell: any) => (
                       <li key={spell.name} className="charactersheet-spell-listitem">
                         <div
                           className="charactersheet-spell-row"
                           onClick={() => setOpenSpell(openSpell === spell.name ? null : spell.name)}
                         >
                           <span>
-                            <b>{spell.name}</b> | {spell.castingTime} | {convertRange(spell.range, unit)} | {spell.components} | {spell.duration}
+                            <b>{spell.name}</b> | {spell.castingTime} | {spell.range} | {spell.components} | {spell.duration}
                           </span>
                           <span>
                             {openSpell === spell.name ? "▲" : "▼"}
@@ -256,7 +246,7 @@ const CharacterSheet: React.FC = () => {
                     </button>
                     {/* Spell slot checkboxes always visible */}
                     <span className="charactersheet-spelllevel-checkboxes">
-                      {Array.from({ length: spellSlots[level - 1] || 0 }).map((_, idx) => (
+                      {Array.from({ length: spellSlots?.[level - 1] || 0 }).map((_, idx) => (
                         <label key={idx}>
                           <input
                             type="checkbox"
@@ -269,14 +259,14 @@ const CharacterSheet: React.FC = () => {
                   </div>
                   {openLevels[level] && (
                     <ul className="charactersheet-spell-list">
-                      {groupedSpells[level].map(spell => (
+                      {groupedSpells[level].map((spell: any) => (
                         <li key={spell.name} className="charactersheet-spell-listitem">
                           <div
                             className="charactersheet-spell-row"
                             onClick={() => setOpenSpell(openSpell === spell.name ? null : spell.name)}
                           >
                             <span>
-                              <b>{spell.name}</b> | {spell.castingTime} | {convertRange(spell.range, unit)} | {spell.components} | {spell.duration}
+                              <b>{spell.name}</b> | {spell.castingTime} | {spell.range} | {spell.components} | {spell.duration}
                             </span>
                             <span>
                               {openSpell === spell.name ? "▲" : "▼"}
@@ -310,8 +300,8 @@ const CharacterSheet: React.FC = () => {
                 Short Rest
               </button>
             </div>
-          </div>          
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./settings.css";
 import supabase from "../../../utils/supabase";
+import { ClassNames } from "../../../utils/types/types";
+import { fetchSpellslots } from "../../../utils/dbFuncs";
+import { getCasterType } from "../../../utils/functions";
 
 const Settings: React.FC = () => {
   const { unit, setUnit, character, setCharacter } = useSettings();
@@ -23,7 +26,7 @@ const Settings: React.FC = () => {
       }
     };
 
-    fetchRes().then((v) => console.log(JSON.stringify(v,null,2)));
+    fetchRes();
   }, []);
 
   // Save/Load state
@@ -42,7 +45,9 @@ const Settings: React.FC = () => {
       ...prev,
       [name]: name === "level" || ["strength","dexterity","constitution","intelligence","wisdom","charisma"].includes(name)
         ? Number(value)
-        : value
+        : name === "class"
+          ? { name: value, spellSlots: getCasterType(character.class.name) === 'None' ? fetchSpellslots(character) : [] }
+          : value
     }));
   };
 
@@ -101,11 +106,10 @@ const Settings: React.FC = () => {
           <input name="name" value={character.name} onChange={handleChange} />
         </label>
         <label>
-          Class:
-          
-          <select name="class" value={character.class} onChange={handleChange}>
-            {classes.map((cls:{class_name: string}) => (
-              <option key={cls.class_name} value={cls.class_name}>{cls.class_name}</option>
+          Class:          
+          <select name="class" value={character.class.name} onChange={handleChange}>
+            {ClassNames.map(cls => (
+              <option key={cls} value={cls}>{cls}</option>
             ))}
           </select>
         </label>
