@@ -15,28 +15,27 @@ import WizardResources from "./classes/WizardResources";
 import { groupAndSortSpells } from "../../../utils/functions";
 import { fetchSpellByIndex, fetchSpellslots } from "../../../utils/dbFuncs";
 import { getSpellSaveDC, getSpellAttackBonus } from "../../../utils/characterFuncs";
+import type { Spell } from "../../../utils/types/types";
 
 const USED_SLOTS_STORAGE_KEY = "usedSlots";
 
 const CharacterSheet: React.FC = () => {
   const { character } = useSettings();
-  const ClassSpecificResources = (function () {
-    switch (character.class.name) {
-      case "Barbarian": return <BarbarianResources />;
-      case "Bard": return <BardResources />;
-      case "Cleric": return <ClericResources />;
-      case "Druid": return <DruidResources />;
-      case "Fighter": return <FighterResources />;
-      case "Monk": return <MonkResources />;
-      case "Paladin": return <PaladinResources />;
-      case "Ranger": return <RangerResources />;
-      case "Rogue": return <RogueResources />;
-      case "Sorcerer": return <SorcererResources />;
-      case "Warlock": return <WarlockResources />;
-      case "Wizard": return <WizardResources />;
-      default: return <RangerResources />;
-    }
-  });
+  const classResourceMap: Record<string, React.FC> = {
+    Barbarian: BarbarianResources,
+    Bard: BardResources,
+    Cleric: ClericResources,
+    Druid: DruidResources,
+    Fighter: FighterResources,
+    Monk: MonkResources,
+    Paladin: PaladinResources,
+    Ranger: RangerResources,
+    Rogue: RogueResources,
+    Sorcerer: SorcererResources,
+    Warlock: WarlockResources,
+    Wizard: WizardResources,
+  };
+  const ClassSpecificResources = classResourceMap[character.class.name] || null;
 
   // Spellcasting state
   const [openSpell, setOpenSpell] = useState<string | null>(null);
@@ -64,8 +63,7 @@ const CharacterSheet: React.FC = () => {
   const [spellSlots, setSpellSlots] = useState<number[] | null>(null);
   useEffect(() => {
     const loadSpellSlots = async () => {
-      const result = await fetchSpellslots(character);
-      console.log(result);
+      const result = await fetchSpellslots(character);      
       if (Array.isArray(result) && result.length > 0) {        
         const slots = Object.values(result[0])[0] as number[];
         setSpellSlots(slots);
@@ -89,26 +87,31 @@ const CharacterSheet: React.FC = () => {
   }, [usedResources, character.class.name]);
 
   // Spells
-  const characterSpellNames: string[] = Array.isArray(character.spells) ? character.spells : [];
-  const [apiSpellDetails, setApiSpellDetails] = useState<Record<string, any>>({});
-  const fetchAndCacheSpell = async (spellName: string) => {
-    if (apiSpellDetails[spellName]) return;
+  const characterSpellIndices: string[] = Array.isArray(character.spellcasting?.spellIndices) ? character.spellcasting.spellIndices : [];
+  const [dbSpellDetails, setDbSpellDetails] = useState<Record<string, any>>({});
+  const fetchAndCacheSpell = async (spellIndex: string) => {
+    if (dbSpellDetails[spellIndex]) return;
     try {
-      const data = await fetchSpellByIndex(spellName);
-      setApiSpellDetails(prev => ({ ...prev, [spellName]: data }));
+      const data = await fetchSpellByIndex(spellIndex);
+      setDbSpellDetails(prev => ({ ...prev, [spellIndex]: data }));
     } catch {
-      setApiSpellDetails(prev => ({ ...prev, [spellName]: { name: spellName, description: "Not found in API." } }));
+      setDbSpellDetails(prev => ({ ...prev, [spellIndex]: { name: "Unknown", index: spellIndex, description: "Not found in API.", level: 0 } }));
     }
   };
-  const characterSpells = useMemo(() => {
-    return characterSpellNames.map((name: string) => {
-      if (apiSpellDetails[name]) return apiSpellDetails[name];
-      fetchAndCacheSpell(name);
-      return { name, description: "Loading...", level: 0, castingTime: "", range: "", components: "", duration: "" };
+  // characterSpells is now array of {name, index}
+  const characterSpells: { name: string; index: string }[] = useMemo(() => {
+    return characterSpellIndices.map((spellIndex: string) => {
+      const spell = dbSpellDetails[spellIndex];
+      if (spell) return { name: spell.name || "Unknown", index: spellIndex };
+      fetchAndCacheSpell(spellIndex);
+      return { name: "Loading...", index: spellIndex };
     });
     // eslint-disable-next-line
-  }, [characterSpellNames, apiSpellDetails]);
-  const filteredCharacterSpells = characterSpells.filter((s: any) => typeof s.level === "number");
+  }, [characterSpellIndices, dbSpellDetails]);
+  // For spell details UI, filter spells from character's indices that have been loaded
+  const filteredCharacterSpells = characterSpellIndices
+    .map(index => dbSpellDetails[index])
+    .filter((s: any) => s && typeof s.level === "number");
   const groupedSpells = groupAndSortSpells(filteredCharacterSpells);
 
   // Spell slot checkbox toggle
@@ -156,7 +159,7 @@ const CharacterSheet: React.FC = () => {
 
       <div>
         <h2>Class Resources</h2>
-        <ClassSpecificResources />
+        {ClassSpecificResources && React.createElement(ClassSpecificResources)}
       </div>
 
       {/* Spellcasting UI */}
@@ -193,6 +196,10 @@ const CharacterSheet: React.FC = () => {
           </div>
           <div className="charactersheet-spell-section">
             <h4>Available Spells</h4>
+            {/* Debug info */}
+            <div style={{fontSize: '12px', color: '#666', marginBottom: '10px'}}>
+              Debug: Spell indices: {characterSpellIndices.length}, Loaded spells: {Object.keys(dbSpellDetails).length}, Filtered spells: {filteredCharacterSpells.length}
+            </div>
             {/* Cantrips */}
             {groupedSpells[0] && (
               <div style={{marginBottom: 10, width: "100%"}}>

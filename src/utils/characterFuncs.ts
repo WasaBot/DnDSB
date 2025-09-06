@@ -1,17 +1,21 @@
 import type { Character } from "./types/types";
 
-const abilityModifiers: Record<string, (score: number) => number> = {
-  strength: (score: number) => Math.floor((score - 10) / 2),
-  dexterity: (score: number) => Math.floor((score - 10) / 2),
-  constitution: (score: number) => Math.floor((score - 10) / 2),
-  intelligence: (score: number) => Math.floor((score - 10) / 2),
-  wisdom: (score: number) => Math.floor((score - 10) / 2),
-  charisma: (score: number) => Math.floor((score - 10) / 2),
-};
+function getAbilityModifier(abilityScore: number): number {
+  return Math.floor((abilityScore - 10) / 2);
+}
 
 export function getSpellAbilityMod(character: Character): number | null {
   if (!character.class.spellcastingAbility) return null;
-  return abilityModifiers[character.class.spellcastingAbility](character[character.class.spellcastingAbility]);
+  switch (character.class.spellcastingAbility) {
+    case 'Charisma':
+      return getAbilityModifier(character.attributes['Charisma']);
+    case 'Wisdom':
+      return getAbilityModifier(character.attributes['Wisdom']);
+    case 'Intelligence':
+      return getAbilityModifier(character.attributes['Intelligence']);
+    default:
+      return null;
+  }
 }
 
 function getProficiencyBonus(level: number): number {

@@ -8,7 +8,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [character, setCharacter] = useState<Character>({
     name: "John",
     class: {
-      name: "Ranger"
+      name: "Fighter"
+    },
+    attributes: {
+      Strength: 10,
+      Dexterity: 10,
+      Constitution: 10,
+      Intelligence: 6,
+      Wisdom: 10,
+      Charisma: 10
     },
     level: 1,
   });
@@ -30,6 +38,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return (
     <SettingsContext.Provider value={{ unit, setUnit, character, setCharacter }}>
+      <div>
+        {unit}, 
+        {character.name}, 
+        {character.class.name}, 
+        {character.class.spellcastingAbility}, 
+        {character.level}, 
+        {character.spellcasting?.spellIndices}, 
+        {character.spellcasting?.spellSlots}
+      </div>
       {children}
     </SettingsContext.Provider>
   );

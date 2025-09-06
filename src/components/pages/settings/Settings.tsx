@@ -3,31 +3,9 @@ import { useSettings } from "../../../context/SettingsContext";
 import "./settings.css";
 import supabase from "../../../utils/supabase";
 import { ClassNames } from "../../../utils/types/types";
-import { fetchSpellslots } from "../../../utils/dbFuncs";
-import { getCasterType } from "../../../utils/functions";
 
 const Settings: React.FC = () => {
   const { unit, setUnit, character, setCharacter } = useSettings();
-  const [classes, setClasses] = useState<any>(['']);
-
-  useEffect(() => {
-    const fetchRes = async () => {
-      const { data: classes, error } = await supabase
-      .from('classes')
-      .select('class_name');
-      
-      if (error) {
-        console.error('Error fetching classes:', error);
-        return;
-      }
-            
-      if (classes && classes.length > 0) {
-        setClasses(classes);
-      }
-    };
-
-    fetchRes();
-  }, []);
 
   // Save/Load state
   const [importString, setImportString] = useState("");
@@ -39,16 +17,73 @@ const Settings: React.FC = () => {
   };
 
   // Character form handlers
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = async (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setCharacter(prev => ({
-      ...prev,
-      [name]: name === "level" || ["strength","dexterity","constitution","intelligence","wisdom","charisma"].includes(name)
-        ? Number(value)
-        : name === "class"
-          ? { name: value, spellSlots: getCasterType(character.class.name) === 'None' ? fetchSpellslots(character) : [] }
-          : value
-    }));
+
+    if (name === "class") {
+      // Fetch spellcasting attribute for the selected class
+      try {
+        const { data, error } = await supabase
+          .from("classes")
+          .select(
+            `
+           spellcast_attribute_id,
+           attributes (
+             id,
+             name
+           )`
+          )
+          .eq("class_name", value)
+          .single();
+        if (error) {
+          console.error("Error fetching class info:", error);
+          setCharacter((prev) => ({
+            ...prev,
+            class: { name: value, spellcastingAbility: undefined },
+          }));
+        } else {          
+          const spellcastingAbility = (data as any).attributes?.name || null;
+          setCharacter((prev) => ({
+            ...prev,
+            class: { name: value, spellcastingAbility },
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching class info:", err);
+        setCharacter((prev) => ({
+          ...prev,
+          class: { name: value, spellcastingAbility: undefined },
+        }));
+      }
+    } else {
+      if (
+        [
+          "strength",
+          "dexterity",
+          "constitution",
+          "intelligence",
+          "wisdom",
+          "charisma",
+        ].includes(name)
+      ) {
+        // Update attribute
+        setCharacter((prev) => ({
+          ...prev,
+          attributes: {
+            ...prev.attributes,
+            [name]: Number(value),
+          },
+        }));
+      } else {
+        // Update other character properties
+        setCharacter((prev) => ({
+          ...prev,
+          [name]: name === "level" ? Number(value) : value,
+        }));
+      }
+    }
   };
 
   // --- Save/Load Feature ---
@@ -92,7 +127,7 @@ const Settings: React.FC = () => {
         <label className="switch">
           <input
             type="checkbox"
-            checked={unit === "m"}
+            checked={unit === "ft"}
             onChange={handleUnitChange}
           />
           <span className="slider"></span>
@@ -103,43 +138,109 @@ const Settings: React.FC = () => {
       <form className="character-form">
         <label>
           Name:
-          <input name="name" value={character.name} onChange={handleChange} />
+          <input
+            name="name"
+            value={character.name ?? ""}
+            onChange={handleChange}
+          />
         </label>
         <label>
-          Class:          
-          <select name="class" value={character.class.name} onChange={handleChange}>
-            {ClassNames.map(cls => (
-              <option key={cls} value={cls}>{cls}</option>
+          Class:
+          <select
+            name="class"
+            value={character.class.name ?? ""}
+            onChange={handleChange}
+          >
+            {ClassNames.map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}
+              </option>
             ))}
           </select>
         </label>
+        {character.class.spellcastingAbility && (
+          <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+            Spellcasting Ability:{" "}
+            {character.class.spellcastingAbility.charAt(0).toUpperCase() +
+              character.class.spellcastingAbility.slice(1)}
+          </div>
+        )}
         <label>
           Level:
-          <input name="level" type="number" min={1} max={20} value={character.level} onChange={handleChange} />
+          <input
+            name="level"
+            type="number"
+            min={1}
+            max={20}
+            value={character.level ?? 1}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Strength:
-          <input name="strength" type="number" min={1} max={20} value={character.strength} onChange={handleChange} />
+          <input
+            name="strength"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Strength ?? 10}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Dexterity:
-          <input name="dexterity" type="number" min={1} max={20} value={character.dexterity} onChange={handleChange} />
+          <input
+            name="dexterity"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Dexterity ?? 10}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Constitution:
-          <input name="constitution" type="number" min={1} max={20} value={character.constitution} onChange={handleChange} />
+          <input
+            name="constitution"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Constitution ?? 10}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Intelligence:
-          <input name="intelligence" type="number" min={1} max={20} value={character.intelligence} onChange={handleChange} />
+          <input
+            name="intelligence"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Intelligence ?? 10}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Wisdom:
-          <input name="wisdom" type="number" min={1} max={20} value={character.wisdom} onChange={handleChange} />
+          <input
+            name="wisdom"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Wisdom ?? 10}
+            onChange={handleChange}
+          />
         </label>
         <label>
           Charisma:
-          <input name="charisma" type="number" min={1} max={20} value={character.charisma} onChange={handleChange} />
+          <input
+            name="charisma"
+            type="number"
+            min={1}
+            max={20}
+            value={character.attributes.Charisma ?? 10}
+            onChange={handleChange}
+          />
         </label>
       </form>
       {/* Save/Load Feature */}
@@ -167,13 +268,13 @@ const Settings: React.FC = () => {
             placeholder="Exported character string will appear here"
             value={exportString}
             readOnly
-            onFocus={e => e.target.select()}
+            onFocus={(e) => e.target.select()}
           />
           <textarea
             style={{ width: "100%", minHeight: 40 }}
             placeholder="Paste character string here to import"
             value={importString}
-            onChange={e => setImportString(e.target.value)}
+            onChange={(e) => setImportString(e.target.value)}
           />
         </div>
       </div>

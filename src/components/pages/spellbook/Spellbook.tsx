@@ -3,6 +3,7 @@ import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
 import { fetchSpellByIndex } from "../../../utils/dbFuncs";
 import supabase from "../../../utils/supabase";
+import type { Spell } from "../../../utils/types/types";
 
 const Spellbook: React.FC = () => {
   const { character, setCharacter } = useSettings();
@@ -16,14 +17,19 @@ const Spellbook: React.FC = () => {
   const [showCharacterSpells, setShowCharacterSpells] = useState(false);
   const suggestionsRef = useRef<HTMLUListElement>(null);
 
-  const handleToggleCharacterSpell = (spellName: string) => {
+  const handleToggleCharacterSpell = (spellIndex: string) => {
     setCharacter(prev => {
-      const spells: string[] = Array.isArray(prev.spellcasting?.spells) ? prev.spellcasting.spells : [];
-      if (spells.includes(spellName)) {
-        return { ...prev, spells: spells.filter((s: string) => s !== spellName) };
-      } else {
-        return { ...prev, spells: [...spells, spellName] };
-      }
+      const spells: string[] = Array.isArray(prev.spellcasting?.spellIndices) ? prev.spellcasting.spellIndices : [];
+      const updatedSpells = spells.includes(spellIndex)
+        ? spells.filter((s: string) => s !== spellIndex)
+        : [...spells, spellIndex];
+      return {
+        ...prev,
+        spellcasting: {
+          spellSlots: prev.spellcasting?.spellSlots !== undefined ? prev.spellcasting.spellSlots : [],
+          spellIndices: updatedSpells
+        }
+      };
     });
   };
 
@@ -58,10 +64,10 @@ const Spellbook: React.FC = () => {
   };
 
   // Remove spell from character's spell list
-  const handleRemoveCharacterSpell = (spellName: string) => {
+  const handleRemoveCharacterSpell = (spellIndex: string) => {
     setCharacter(prev => {
-      const spells: string[] = Array.isArray(prev.spells) ? prev.spells : [];
-      return { ...prev, spells: spells.filter((s: string) => s !== spellName) };
+      const spellIndices: string[] = Array.isArray(prev.spellcasting?.spellIndices) ? prev.spellcasting.spellIndices : [];
+      return { ...prev, spellcasting: { spellSlots: prev.spellcasting?.spellSlots !== undefined ? prev.spellcasting.spellSlots : [], spellIndices: spellIndices.filter((s: string) => s !== spellIndex) } };
     });
   };
 
@@ -81,7 +87,8 @@ const Spellbook: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showSuggestions]);
 
-  const characterSpells: string[] = Array.isArray(character.spells) ? character.spells : [];
+  const characterSpells: {name:string, index: string}[] = Array.isArray(character.spellcasting?.spellIndices) ? 
+  character.spellcasting.spellIndices.map(index => ({name: suggestions.find(s => s.index === index)?.name || "Unknown", index})) : [];
 
   return (
     <div>
@@ -99,16 +106,16 @@ const Spellbook: React.FC = () => {
             {characterSpells.length === 0 && (
               <li className="spellbook-myspells-empty">No spells added yet.</li>
             )}
-            {characterSpells.map(spellName => (
+            {characterSpells.map(spell => (
               <li
-                key={spellName}
+                key={spell.index}
                 className="spellbook-myspells-listitem"
               >
-                <span>{spellName}</span>
+                <span>{spell.name}</span>
                 <button
                   type="button"
                   className="spellbook-myspells-remove-btn"
-                  onClick={() => handleRemoveCharacterSpell(spellName)}
+                  onClick={() => handleRemoveCharacterSpell(spell.index)}
                   title="Remove spell"
                 >
                   ✕
@@ -167,11 +174,10 @@ const Spellbook: React.FC = () => {
             <label className="spellbook-spell-details-checkbox">
               <input
                 type="checkbox"
-                checked={characterSpells.includes(spell.name)}
-                onChange={() => handleToggleCharacterSpell(spell.name)}
+                checked={characterSpells.includes(spell.index)}
+                onChange={() => handleToggleCharacterSpell(spell.index)}
               />
               Add to character
-              {/* TODO: add  to character fixen */}
             </label>
           </div>
           <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
