@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, use } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
 import { fetchSpellByIndex } from "../../../utils/dbFuncs";
 import supabase from "../../../utils/supabase";
-import type { Spell } from "../../../utils/types/types";
 
 const Spellbook: React.FC = () => {
   const { character, setCharacter } = useSettings();
@@ -12,7 +11,6 @@ const Spellbook: React.FC = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [spell, setSpell] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCharacterSpells, setShowCharacterSpells] = useState(false);
   const suggestionsRef = useRef<HTMLUListElement>(null);
@@ -150,9 +148,6 @@ const Spellbook: React.FC = () => {
             ref={suggestionsRef}
             className="spellbook-suggestions"
           >
-            {loadingSuggestions && (
-              <li style={{ padding: 8 }}>Loading...</li>
-            )}
             {suggestions.map(s => (
               <li
                 key={s.index}

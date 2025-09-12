@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import BarbarianResources from "./classes/BarbarianResources";
 import BardResources from "./classes/BardResources";
@@ -13,9 +13,8 @@ import SorcererResources from "./classes/SorcererResources";
 import WarlockResources from "./classes/WarlockResources";
 import WizardResources from "./classes/WizardResources";
 import { groupAndSortSpells } from "../../../utils/functions";
-import { fetchSpellByIndex, fetchSpellslots } from "../../../utils/dbFuncs";
+import { fetchSpellslots } from "../../../utils/dbFuncs";
 import { getSpellSaveDC, getSpellAttackBonus } from "../../../utils/characterFuncs";
-import type { Spell } from "../../../utils/types/types";
 
 const USED_SLOTS_STORAGE_KEY = "usedSlots";
 
@@ -88,26 +87,7 @@ const CharacterSheet: React.FC = () => {
 
   // Spells
   const characterSpellIndices: string[] = Array.isArray(character.spellcasting?.spellIndices) ? character.spellcasting.spellIndices : [];
-  const [dbSpellDetails, setDbSpellDetails] = useState<Record<string, any>>({});
-  const fetchAndCacheSpell = async (spellIndex: string) => {
-    if (dbSpellDetails[spellIndex]) return;
-    try {
-      const data = await fetchSpellByIndex(spellIndex);
-      setDbSpellDetails(prev => ({ ...prev, [spellIndex]: data }));
-    } catch {
-      setDbSpellDetails(prev => ({ ...prev, [spellIndex]: { name: "Unknown", index: spellIndex, description: "Not found in API.", level: 0 } }));
-    }
-  };
-  // characterSpells is now array of {name, index}
-  const characterSpells: { name: string; index: string }[] = useMemo(() => {
-    return characterSpellIndices.map((spellIndex: string) => {
-      const spell = dbSpellDetails[spellIndex];
-      if (spell) return { name: spell.name || "Unknown", index: spellIndex };
-      fetchAndCacheSpell(spellIndex);
-      return { name: "Loading...", index: spellIndex };
-    });
-    // eslint-disable-next-line
-  }, [characterSpellIndices, dbSpellDetails]);
+  const dbSpellDetails: Record<string, any> = {};
   // For spell details UI, filter spells from character's indices that have been loaded
   const filteredCharacterSpells = characterSpellIndices
     .map(index => dbSpellDetails[index])
