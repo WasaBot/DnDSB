@@ -1,5 +1,5 @@
 import React from "react";
-import { useSettings } from "../../../../context/SettingsContext";
+import { useSettings } from "../../../../../context/SettingsContext";
 
 const PaladinResources: React.FC = () => {
   const { character } = useSettings();

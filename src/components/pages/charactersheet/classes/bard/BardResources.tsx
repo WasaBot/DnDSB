@@ -1,5 +1,5 @@
 import React from "react";
-import { useSettings } from "../../../../context/SettingsContext";
+import { useSettings } from "../../../../../context/SettingsContext";
 
 const BardResources: React.FC = () => {
   const { character } = useSettings();

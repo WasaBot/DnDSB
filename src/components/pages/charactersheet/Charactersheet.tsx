@@ -1,22 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useSettings } from "../../../context/SettingsContext";
-import BarbarianResources from "./classes/BarbarianResources";
-import BardResources from "./classes/BardResources";
-import ClericResources from "./classes/ClericResources";
-import DruidResources from "./classes/DruidResources";
-import FighterResources from "./classes/FighterResources";
-import MonkResources from "./classes/MonkResources";
-import PaladinResources from "./classes/PaladinResources";
-import RangerResources from "./classes/RangerResources";
-import RogueResources from "./classes/RogueResources";
-import SorcererResources from "./classes/SorcererResources";
-import WarlockResources from "./classes/WarlockResources";
-import WizardResources from "./classes/WizardResources";
-import { groupAndSortSpells } from "../../../utils/functions";
-import { fetchSpellslots } from "../../../utils/dbFuncs";
-import { getSpellSaveDC, getSpellAttackBonus } from "../../../utils/characterFuncs";
-
-const USED_SLOTS_STORAGE_KEY = "usedSlots";
+import BarbarianResources from "./classes/barbarian/BarbarianResources";
+import BardResources from "./classes/bard/BardResources";
+import ClericResources from "./classes/cleric/ClericResources";
+import DruidResources from "./classes/druid/DruidResources";
+import FighterResources from "./classes/fighter/FighterResources";
+import MonkResources from "./classes/monk/MonkResources";
+import PaladinResources from "./classes/paladin/PaladinResources";
+import RangerResources from "./classes/ranger/RangerResources";
+import RogueResources from "./classes/rogue/RogueResources";
+import SorcererResources from "./classes/sorcerer/SorcererResources";
+import WarlockResources from "./classes/warlock/WarlockResources";
+import WizardResources from "./classes/wizard/WizardResources";
+import Spellarea from "../../partials/spellarea/Spellarea";
+import RestButtons from "../../partials/restbuttons/RestButtons";
 
 const CharacterSheet: React.FC = () => {
   const { character } = useSettings();
