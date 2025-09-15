@@ -25,7 +25,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Auto-generate character ID when name or class changes
   React.useEffect(() => {
-    const newId = generateCharacterId(character.name, character.class.name, character.class.subclass);
+    const newId = generateCharacterId(character.name, character.class.name, character.class.subclass?.id);
     if (character.id !== newId) {
       setCharacter(prev => ({
         ...prev,

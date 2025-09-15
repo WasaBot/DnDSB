@@ -1,160 +1,167 @@
 import React, { useEffect, useState } from "react";
-import {
-  getSpellSaveDC,
-  getSpellAttackBonus,
-} from "../../../utils/characterFuncs";
 import { useSettings } from "../../../context/SettingsContext";
 import Spelllist from "../spelllist/Spelllist";
 import { groupAndSortSpells } from "../../../utils/functions";
 import { fetchSpellsByIndices, fetchSpellslots } from "../../../utils/dbFuncs";
 
 const Spellarea: React.FC = () => {
-  const { character } = useSettings();
-  const [dbSpellDetails, setDbSpellDetails] = useState<Record<string, any>>({});
-  const [spellSlots, setSpellSlots] = useState<number[] | null>(null);
-  const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>(() => {
-    try {
-      const saved = localStorage.getItem(`usedSlots_${character.id}`);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const characterSpellIndices: string[] = character.spellcasting?.spellIndices || [];
-  
-  // Fetch spell details when spell indices change
-  useEffect(() => {
-    const loadSpellDetails = async () => {
-      if (characterSpellIndices.length > 0) {
-        const spellDetails = await fetchSpellsByIndices(characterSpellIndices);
-        setDbSpellDetails(spellDetails);
-      } else {
-        setDbSpellDetails({});
-      }
-    };
-    loadSpellDetails();
-  }, []);
+    const { character } = useSettings();
+    const [dbSpellDetails, setDbSpellDetails] = useState<Record<string, any>>(
+        {}
+    );
+    const [spellSlots, setSpellSlots] = useState<number[] | null>(null);
+    const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>(
+        () => {
+            try {
+                const saved = localStorage.getItem(`usedSlots_${character.id}`);
+                return saved ? JSON.parse(saved) : {};
+            } catch {
+                return {};
+            }
+        }
+    );
+    const characterSpellIndices: string[] = character.spellIndices || [];
 
-  // Fetch spell slots
-  useEffect(() => {
-    const loadSpellSlots = async () => {
-      const result = await fetchSpellslots(character);
-      if (Array.isArray(result) && result.length > 0) {
-        const slots = Object.values(result[0])[0] as number[];
-        setSpellSlots(slots);
-      } else {
-        setSpellSlots(null);
-      }
-    };
-    loadSpellSlots();
-  }, [character.level, character.class.name]);
+    // Fetch spell details when spell indices change
+    useEffect(() => {
+        const loadSpellDetails = async () => {
+            if (characterSpellIndices.length > 0) {
+                const spellDetails = await fetchSpellsByIndices(
+                    characterSpellIndices
+                );
+                setDbSpellDetails(spellDetails);
+            } else {
+                setDbSpellDetails({});
+            }
+        };
+        loadSpellDetails();
+    }, []);
 
-  const filteredCharacterSpells = characterSpellIndices
-    .map((index) => dbSpellDetails[index])
-    .filter((s: any) => s && typeof s.level === "number");
-  const groupedSpells = groupAndSortSpells(filteredCharacterSpells);
+    // Fetch spell slots
+    useEffect(() => {
+        const loadSpellSlots = async () => {
+            const result = await fetchSpellslots(character);
+            if (Array.isArray(result) && result.length > 0) {
+                const slots = Object.values(result[0])[0] as number[];
+                setSpellSlots(slots);
+            } else {
+                setSpellSlots(null);
+            }
+        };
+        loadSpellSlots();
+    }, [character.level, character.class.name]);
 
-  // Create all spell levels (0-9) with spells if available, empty arrays if not
-  const allSpellLevels = Array.from({ length: 10 }, (_, i) => ({
-    level: i,
-    spells: groupedSpells[i] || []
-  }));
-  const [usedResources, setUsedResources] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem(`resources_${character.id}`);
-      return saved ? JSON.parse(saved) : 0;
-    } catch {
-      return 0;
-    }
-  });
+    const filteredCharacterSpells = characterSpellIndices
+        .map((index) => dbSpellDetails[index])
+        .filter((s: any) => s && typeof s.level === "number");
+    const groupedSpells = groupAndSortSpells(filteredCharacterSpells);
 
-  // Save used slots when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(`usedSlots_${character.id}`, JSON.stringify(usedSlots));
-    } catch {}
-  }, [usedSlots, character.id]);
-
-  // Save used resources when they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(`resources_${character.id}`, JSON.stringify(usedResources));
-    } catch {}
-  }, [usedResources, character.id]);
-
-  // Load character-specific resources when character ID changes
-  useEffect(() => {
-    try {
-      const savedSlots = localStorage.getItem(`usedSlots_${character.id}`);
-      const savedResources = localStorage.getItem(`resources_${character.id}`);
-      
-      if (savedSlots) {
-        setUsedSlots(JSON.parse(savedSlots));
-      } else {
-        setUsedSlots({});
-      }
-      
-      if (savedResources) {
-        setUsedResources(JSON.parse(savedResources));
-      } else {
-        setUsedResources(0);
-      }
-    } catch {
-      setUsedSlots({});
-      setUsedResources(0);
-    }
-  }, [character.id]);
-
-  // Spell slot checkbox toggle handler
-  const handleSlotToggle = (level: number, idx: number) => {
-    setUsedSlots(prev => {
-      const slotsForLevel = level === 0 ? 0 : (spellSlots?.[level - 1] || 0);
-      const arr = prev[level] && prev[level].length === slotsForLevel 
-        ? [...prev[level]] 
-        : Array(slotsForLevel).fill(false);
-      arr[idx] = !arr[idx];
-      return { ...prev, [level]: arr };
+    // Create all spell levels (0-9) with spells if available, empty arrays if not
+    const allSpellLevels = Array.from({ length: 10 }, (_, i) => ({
+        level: i,
+        spells: groupedSpells[i] || [],
+    }));
+    const [usedResources, setUsedResources] = useState<number>(() => {
+        try {
+            const saved = localStorage.getItem(`resources_${character.id}`);
+            return saved ? JSON.parse(saved) : 0;
+        } catch {
+            return 0;
+        }
     });
-  };
 
-//setUsedResources(0); //TODO: richtig machen
+    // Save used slots when they change
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                `usedSlots_${character.id}`,
+                JSON.stringify(usedSlots)
+            );
+        } catch {}
+    }, [usedSlots, character.id]);
 
-  return (
-    <>
-      {character.class.spellcastingAbility && (
-        <div>
-          <h3>Spellcasting</h3>
-          <div>
-            <b>Spellcasting Attribute:</b>{" "}
-            {character.class.spellcastingAbility || "Loading..."}
-          </div>
-          <ul>
-            <li>
-              <b>Spell Save DC:</b> {getSpellSaveDC(character)}
-            </li>
-            <li>
-              <b>Spell Attack Bonus:</b> +{getSpellAttackBonus(character)}
-            </li>
-          </ul>
+    // Save used resources when they change
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                `resources_${character.id}`,
+                JSON.stringify(usedResources)
+            );
+        } catch {}
+    }, [usedResources, character.id]);
 
-          <div className="charactersheet-spell-section">
-            <h4>Available Spells</h4>
-            {allSpellLevels.map(({ level, spells }) =>(level == 0 || (spellSlots?.[level-1] !== undefined && spellSlots[level-1] > 0)) && (
-              <div key={level}>
-                <Spelllist 
-                  level={level} 
-                  spellarray={spells}
-                  usedSlots={usedSlots[level] || []}
-                  onSlotToggle={(idx: number) => handleSlotToggle(level, idx)}
-                  spellSlots={spellSlots}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
+    // Load character-specific resources when character ID changes
+    useEffect(() => {
+        try {
+            const savedSlots = localStorage.getItem(
+                `usedSlots_${character.id}`
+            );
+            const savedResources = localStorage.getItem(
+                `resources_${character.id}`
+            );
+
+            if (savedSlots) {
+                setUsedSlots(JSON.parse(savedSlots));
+            } else {
+                setUsedSlots({});
+            }
+
+            if (savedResources) {
+                setUsedResources(JSON.parse(savedResources));
+            } else {
+                setUsedResources(0);
+            }
+        } catch {
+            setUsedSlots({});
+            setUsedResources(0);
+        }
+    }, [character.id]);
+
+    // Spell slot checkbox toggle handler
+    const handleSlotToggle = (level: number, idx: number) => {
+        setUsedSlots((prev) => {
+            const slotsForLevel =
+                level === 0 ? 0 : spellSlots?.[level - 1] || 0;
+            const arr =
+                prev[level] && prev[level].length === slotsForLevel
+                    ? [...prev[level]]
+                    : Array(slotsForLevel).fill(false);
+            arr[idx] = !arr[idx];
+            return { ...prev, [level]: arr };
+        });
+    };
+
+    //setUsedResources(0); //TODO: richtig machen
+
+    return (
+        <>
+            {character.class.spellcastingAbility && (
+                <div>
+                    <div className="charactersheet-spell-section">
+                        <h4>Available Spells</h4>
+                        {allSpellLevels.map(
+                            ({ level, spells }) =>
+                                (level == 0 ||
+                                    (spellSlots?.[level - 1] !== undefined &&
+                                        spellSlots[level - 1] > 0)) && (
+                                    <div key={level}>
+                                        <Spelllist
+                                            level={level}
+                                            spellarray={spells}
+                                            usedSlots={usedSlots[level] || []}
+                                            onSlotToggle={(idx: number) =>
+                                                handleSlotToggle(level, idx)
+                                            }
+                                            spellSlots={spellSlots}
+                                        />
+                                    </div>
+                                )
+                        )}
+                    </div>
+                </div>
+            )}
+        </>
+    );
 };
 
 export default Spellarea;

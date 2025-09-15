@@ -14,51 +14,95 @@ import WarlockResources from "./classes/warlock/WarlockResources";
 import WizardResources from "./classes/wizard/WizardResources";
 import Spellarea from "../../partials/spellarea/Spellarea";
 import RestButtons from "../../partials/restbuttons/RestButtons";
+import {
+    getSpellSaveDC,
+    getSpellAttackBonus,
+} from "../../../utils/characterFuncs";
 
 const CharacterSheet: React.FC = () => {
-  const { character } = useSettings();
-  const classResourceMap: Record<string, React.FC> = {
-    Barbarian: BarbarianResources,
-    Bard: BardResources,
-    Cleric: ClericResources,
-    Druid: DruidResources,
-    Fighter: FighterResources,
-    Monk: MonkResources,
-    Paladin: PaladinResources,
-    Ranger: RangerResources,
-    Rogue: RogueResources,
-    Sorcerer: SorcererResources,
-    Warlock: WarlockResources,
-    Wizard: WizardResources,
-  };
-  const ClassSpecificResources = classResourceMap[character.class.name] || null;
+    const { character } = useSettings();
+    const classResourceMap: Record<string, React.FC> = {
+        Barbarian: BarbarianResources,
+        Bard: BardResources,
+        Cleric: ClericResources,
+        Druid: DruidResources,
+        Fighter: FighterResources,
+        Monk: MonkResources,
+        Paladin: PaladinResources,
+        Ranger: RangerResources,
+        Rogue: RogueResources,
+        Sorcerer: SorcererResources,
+        Warlock: WarlockResources,
+        Wizard: WizardResources,
+    };
+    const ClassSpecificResources =
+        classResourceMap[character.class.name] || null;
 
-  //TODO implement rest functionality for spells and resources
-  const handleLongRest = () => {};
-  const handleShortRest = () => {};
+    //TODO implement rest functionality for spells and resources
+    const handleLongRest = () => {};
+    const handleShortRest = () => {};
 
-  return (
-    <>
-      <h2>Character Sheet</h2>
-      <p>
-        <b>Name:</b> {character.name}<br />
-        <b>Class:</b> {character.class.name}<br />
-        <b>Level:</b> {character.level}
-      </p>
+    return (
+        <>
+            <h2>Character Sheet</h2>
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                }}
+            >
+                <div>
+                    <h3>General Information</h3>
+                    <p>
+                        <b>Name:</b> {character.name}
+                        <br />
+                        <b>Level:</b> {character.level}
+                        <br />
+                        <b>Class:</b> {character.class.name}
+                        <br />
+                        {character.class.subclass && (
+                            <>
+                                <b>Subclass:</b>{" "}
+                                {character.class.subclass?.name || "None"}
+                            </>
+                        )}
+                    </p>
+                </div>
+                {character.spellIndices !== undefined && (
+                    <div>
+                        <h3>Spellcasting</h3>
+                        <div>
+                            <b>Spellcasting Attribute:</b>{" "}
+                            {character.class.spellcastingAbility ||
+                                "Loading..."}
+                        </div>
+                        <ul>
+                            <li>
+                                <b>Spell Save DC:</b>{" "}
+                                {getSpellSaveDC(character)}
+                            </li>
+                            <li>
+                                <b>Spell Attack Bonus:</b> +
+                                {getSpellAttackBonus(character)}
+                            </li>
+                        </ul>
+                    </div>
+                )}
+            </div>
 
-      <div>
-        <h2>Class Resources</h2>
-        {ClassSpecificResources && React.createElement(ClassSpecificResources)}
-      </div>
+            <h2>Class Resources</h2>
+            {ClassSpecificResources &&
+                React.createElement(ClassSpecificResources)}
+            <Spellarea />
 
-      <Spellarea />
-
-      <RestButtons
-        handleLongRest={handleLongRest}
-        handleShortRest={handleShortRest}
-      />
-      </>
-  );
+            <RestButtons
+                handleLongRest={handleLongRest}
+                handleShortRest={handleShortRest}
+            />
+        </>
+    );
 };
 
 export default CharacterSheet;

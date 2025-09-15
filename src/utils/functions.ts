@@ -41,7 +41,7 @@ export function generateCharacterId(name: string, className: string, subclass?: 
   // Clean the strings by removing spaces and special characters, converting to lowercase
   const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
   const cleanClass = className.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const cleanSubclass = subclass ? subclass.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const cleanSubclass = subclass ? subclass.toLowerCase() : '';
   
   // Create the ID
   if (cleanSubclass) {
