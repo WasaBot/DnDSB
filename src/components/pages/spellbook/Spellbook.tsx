@@ -7,13 +7,17 @@ import supabase from "../../../utils/supabase";
 const Spellbook: React.FC = () => {
   const { character, setCharacter } = useSettings();
   const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState<{name:string,index:string}[]>([]);
+  const [allSpells, setAllSpells] = useState<{name:string,index:string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [spell, setSpell] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCharacterSpells, setShowCharacterSpells] = useState(false);
   const suggestionsRef = useRef<HTMLUListElement>(null);
+
+  const filteredSuggestions = allSpells.filter(spell =>
+    spell.name.toLowerCase().includes(search.toLowerCase())
+  ).slice(0, 10);
 
   const handleToggleCharacterSpell = (spellIndex: string) => {
     setCharacter(prev => {
@@ -32,17 +36,17 @@ const Spellbook: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchSuggestions = async (): Promise<any> => {
+    const fetchAllSpells = async (): Promise<any> => {
     const { data, error } = await supabase
       .from('spells')
       .select('name,index');
     if (error) {
       throw new Error(error.message);
     } else {
-      setSuggestions(data as any);
+      setAllSpells(data as any);
     };
   };
-  fetchSuggestions();
+  fetchAllSpells();
   }, []);
 
   const handleSelectSuggestion = async (spellObj: any) => {
@@ -86,7 +90,7 @@ const Spellbook: React.FC = () => {
   }, [showSuggestions]);
 
   const characterSpells: {name:string, index: string}[] = Array.isArray(character.spellcasting?.spellIndices) ? 
-  character.spellcasting.spellIndices.map(index => ({name: suggestions.find(s => s.index === index)?.name || "Unknown", index})) : [];
+  character.spellcasting.spellIndices.map(index => ({name: allSpells.find((s: {name:string,index:string}) => s.index === index)?.name || "Unknown", index})) : [];
 
   return (
     <div>
@@ -126,7 +130,7 @@ const Spellbook: React.FC = () => {
       <form
         onSubmit={e => {
           e.preventDefault();
-          if (suggestions.length > 0) handleSelectSuggestion(suggestions[0]);
+          if (filteredSuggestions.length > 0) handleSelectSuggestion(filteredSuggestions[0]);
         }}
         className="spellbook-search-form"
         autoComplete="off"
@@ -137,26 +141,40 @@ const Spellbook: React.FC = () => {
           value={search}
           onChange={e => {
             setSearch(e.target.value);
-            setShowSuggestions(true);
+            setShowSuggestions(e.target.value.length > 0);
           }}
           className="spellbook-search-input"
           onFocus={() => setShowSuggestions(true)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') {
+              setShowSuggestions(false);
+            } else if (e.key === 'ArrowDown' && filteredSuggestions.length > 0) {
+              e.preventDefault();
+              // Focus first suggestion (could be enhanced further with keyboard navigation)
+            }
+          }}
         />
         <button type="submit" className="spellbook-search-btn">Search</button>
-        {showSuggestions && suggestions.length > 0 && (
+        {showSuggestions && search.length > 0 && (
           <ul
             ref={suggestionsRef}
             className="spellbook-suggestions"
           >
-            {suggestions.map(s => (
-              <li
-                key={s.index}
-                className="spellbook-suggestion-item"
-                onClick={() => handleSelectSuggestion(s)}
-              >
-                {s.name}
+            {filteredSuggestions.length > 0 ? (
+              filteredSuggestions.map((s: {name:string,index:string}) => (
+                <li
+                  key={s.index}
+                  className="spellbook-suggestion-item"
+                  onClick={() => handleSelectSuggestion(s)}
+                >
+                  {s.name}
+                </li>
+              ))
+            ) : (
+              <li className="spellbook-suggestion-item" style={{ fontStyle: 'italic', color: '#666' }}>
+                No spells found
               </li>
-            ))}
+            )}
           </ul>
         )}
       </form>
@@ -169,7 +187,7 @@ const Spellbook: React.FC = () => {
             <label className="spellbook-spell-details-checkbox">
               <input
                 type="checkbox"
-                checked={characterSpells.includes(spell.index)}
+                checked={characterSpells.some(charSpell => charSpell.index === spell.index)}
                 onChange={() => handleToggleCharacterSpell(spell.index)}
               />
               Add to character

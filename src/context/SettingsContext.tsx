@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState } from "react";
 import type { Character, SettingsContextType, UnitType } from "../utils/types/types";
+import { generateCharacterId } from "../utils/functions";
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [unit, setUnit] = useState<UnitType>("ft");
   const [character, setCharacter] = useState<Character>({
+    id: generateCharacterId("John", "Fighter"),
     name: "John",
     class: {
       name: "Fighter"
@@ -20,6 +22,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     level: 1,
   });
+
+  // Auto-generate character ID when name or class changes
+  React.useEffect(() => {
+    const newId = generateCharacterId(character.name, character.class.name, character.class.subclass);
+    if (character.id !== newId) {
+      setCharacter(prev => ({
+        ...prev,
+        id: newId
+      }));
+    }
+  }, [character.name, character.class.name, character.class.subclass, character.id]);
 
   React.useEffect(() => {
       const params = new URLSearchParams(window.location.search);
@@ -38,15 +51,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return (
     <SettingsContext.Provider value={{ unit, setUnit, character, setCharacter }}>
-      <div>
-        {unit}, 
-        {character.name}, 
-        {character.class.name}, 
-        {character.class.spellcastingAbility}, 
-        {character.level}, 
-        {character.spellcasting?.spellIndices}, 
-        {character.spellcasting?.spellSlots}
-      </div>
       {children}
     </SettingsContext.Provider>
   );

@@ -91,13 +91,17 @@ const Settings: React.FC = () => {
   const handleExport = () => {
     // Try to get usedSlots from localStorage if present
     let usedSlots: any = undefined;
+    let usedResources: any = undefined;
     try {
-      const slots = localStorage.getItem("usedSlots");
+      const slots = localStorage.getItem(`usedSlots_${character.id}`);
       if (slots) usedSlots = JSON.parse(slots);
+      const resources = localStorage.getItem(`resources_${character.id}`);
+      if (resources) usedResources = JSON.parse(resources);
     } catch {}
     const data = {
       character,
       usedSlots,
+      usedResources,
     };
     setExportString(btoa(unescape(encodeURIComponent(JSON.stringify(data)))));
   };
@@ -107,11 +111,20 @@ const Settings: React.FC = () => {
     try {
       const decoded = decodeURIComponent(escape(atob(importString.trim())));
       const data = JSON.parse(decoded);
-      if (data.character) setCharacter(data.character);
-      if (data.usedSlots) {
-        try {
-          localStorage.setItem("usedSlots", JSON.stringify(data.usedSlots));
-        } catch {}
+      if (data.character) {
+        setCharacter(data.character);
+        // Use the imported character's ID for storing the resources
+        const characterId = data.character.id;
+        if (data.usedSlots) {
+          try {
+            localStorage.setItem(`usedSlots_${characterId}`, JSON.stringify(data.usedSlots));
+          } catch {}
+        }
+        if (data.usedResources) {
+          try {
+            localStorage.setItem(`resources_${characterId}`, JSON.stringify(data.usedResources));
+          } catch {}
+        }
       }
       alert("Character loaded!");
     } catch {

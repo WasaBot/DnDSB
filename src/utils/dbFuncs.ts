@@ -30,3 +30,27 @@ export async function fetchSpellByIndex(spellIndex: string): Promise<Spell> {
         return data as Spell;
     }
 }
+
+export async function fetchSpellsByIndices(spellIndices: string[]): Promise<Record<string, Spell>> {
+    if (spellIndices.length === 0) {
+        return {};
+    }
+    
+    const { data, error } = await supabase
+        .from('spells')
+        .select('*')
+        .in('index', spellIndices);
+        
+    if (error) {
+        console.error('Error fetching spells:', error.message);
+        return {};
+    }
+    
+    // Convert array to record with index as key
+    const spellRecord: Record<string, Spell> = {};
+    data?.forEach((spell: Spell) => {
+        spellRecord[spell.index] = spell;
+    });
+    
+    return spellRecord;
+}

@@ -7,6 +7,7 @@ export type AttributeName = typeof AttributeNames[number];
 interface Class {
   name: ClassName;
   spellcastingAbility?: AttributeName;
+  subclass?: string;
 }
 
 interface Attributes {
@@ -24,6 +25,7 @@ interface Spellcasting {
 }
 
 export type Character = {
+  id: string;
   name: string;
   class: Class;
   level: number;
