@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "13.0.5"
   }
   graphql_public: {
     Tables: {
@@ -56,6 +56,45 @@ export type Database = {
           short_name?: string
         }
         Relationships: []
+      }
+      class_prepared_spells: {
+        Row: {
+          class_index: string
+          created_at: string | null
+          id: number
+          level_required: number
+          spell_index: string
+        }
+        Insert: {
+          class_index: string
+          created_at?: string | null
+          id?: number
+          level_required: number
+          spell_index: string
+        }
+        Update: {
+          class_index?: string
+          created_at?: string | null
+          id?: number
+          level_required?: number
+          spell_index?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_prepared_spells_class_index_fkey"
+            columns: ["class_index"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["class_index"]
+          },
+          {
+            foreignKeyName: "class_prepared_spells_spell_index_fkey"
+            columns: ["spell_index"]
+            isOneToOne: false
+            referencedRelation: "spells"
+            referencedColumns: ["index"]
+          },
+        ]
       }
       class_resources: {
         Row: {
@@ -178,20 +217,6 @@ export type Database = {
           "area_of_effect/type": string | null
           attack_type: string | null
           casting_time: string | null
-          "classes/0/index": string | null
-          "classes/0/name": string | null
-          "classes/1/index": string | null
-          "classes/1/name": string | null
-          "classes/2/index": string | null
-          "classes/2/name": string | null
-          "classes/3/index": string | null
-          "classes/3/name": string | null
-          "classes/4/index": string | null
-          "classes/4/name": string | null
-          "classes/5/index": string | null
-          "classes/5/name": string | null
-          "classes/6/index": string | null
-          "classes/6/name": string | null
           "components/0": string | null
           "components/1": string | null
           "components/2": string | null
@@ -262,32 +287,12 @@ export type Database = {
           ritual: boolean | null
           "school/index": string | null
           "school/name": string | null
-          "subclasses/0/index": string | null
-          "subclasses/0/name": string | null
-          "subclasses/1/index": string | null
-          "subclasses/1/name": string | null
-          "subclasses/2/index": string | null
-          "subclasses/2/name": string | null
         }
         Insert: {
           "area_of_effect/size"?: string | null
           "area_of_effect/type"?: string | null
           attack_type?: string | null
           casting_time?: string | null
-          "classes/0/index"?: string | null
-          "classes/0/name"?: string | null
-          "classes/1/index"?: string | null
-          "classes/1/name"?: string | null
-          "classes/2/index"?: string | null
-          "classes/2/name"?: string | null
-          "classes/3/index"?: string | null
-          "classes/3/name"?: string | null
-          "classes/4/index"?: string | null
-          "classes/4/name"?: string | null
-          "classes/5/index"?: string | null
-          "classes/5/name"?: string | null
-          "classes/6/index"?: string | null
-          "classes/6/name"?: string | null
           "components/0"?: string | null
           "components/1"?: string | null
           "components/2"?: string | null
@@ -358,32 +363,12 @@ export type Database = {
           ritual?: boolean | null
           "school/index"?: string | null
           "school/name"?: string | null
-          "subclasses/0/index"?: string | null
-          "subclasses/0/name"?: string | null
-          "subclasses/1/index"?: string | null
-          "subclasses/1/name"?: string | null
-          "subclasses/2/index"?: string | null
-          "subclasses/2/name"?: string | null
         }
         Update: {
           "area_of_effect/size"?: string | null
           "area_of_effect/type"?: string | null
           attack_type?: string | null
           casting_time?: string | null
-          "classes/0/index"?: string | null
-          "classes/0/name"?: string | null
-          "classes/1/index"?: string | null
-          "classes/1/name"?: string | null
-          "classes/2/index"?: string | null
-          "classes/2/name"?: string | null
-          "classes/3/index"?: string | null
-          "classes/3/name"?: string | null
-          "classes/4/index"?: string | null
-          "classes/4/name"?: string | null
-          "classes/5/index"?: string | null
-          "classes/5/name"?: string | null
-          "classes/6/index"?: string | null
-          "classes/6/name"?: string | null
           "components/0"?: string | null
           "components/1"?: string | null
           "components/2"?: string | null
@@ -454,12 +439,6 @@ export type Database = {
           ritual?: boolean | null
           "school/index"?: string | null
           "school/name"?: string | null
-          "subclasses/0/index"?: string | null
-          "subclasses/0/name"?: string | null
-          "subclasses/1/index"?: string | null
-          "subclasses/1/name"?: string | null
-          "subclasses/2/index"?: string | null
-          "subclasses/2/name"?: string | null
         }
         Relationships: []
       }
@@ -544,6 +523,45 @@ export type Database = {
             foreignKeyName: "spellslots_subclass_index_fkey"
             columns: ["subclass_index"]
             isOneToOne: true
+            referencedRelation: "subclasses"
+            referencedColumns: ["index"]
+          },
+        ]
+      }
+      subclass_prepared_spells: {
+        Row: {
+          created_at: string | null
+          id: number
+          level_required: number
+          spell_index: string
+          subclass_index: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          level_required: number
+          spell_index: string
+          subclass_index: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          level_required?: number
+          spell_index?: string
+          subclass_index?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subclass_prepared_spells_spell_index_fkey"
+            columns: ["spell_index"]
+            isOneToOne: false
+            referencedRelation: "spells"
+            referencedColumns: ["index"]
+          },
+          {
+            foreignKeyName: "subclass_prepared_spells_subclass_index_fkey"
+            columns: ["subclass_index"]
+            isOneToOne: false
             referencedRelation: "subclasses"
             referencedColumns: ["index"]
           },

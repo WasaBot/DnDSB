@@ -54,3 +54,39 @@ export async function fetchSpellsByIndices(spellIndices: string[]): Promise<Reco
     
     return spellRecord;
 }
+
+/**
+ * Fetch class-based always prepared spells for a character
+ */
+export async function fetchClassPreparedSpells(classIndex: string, characterLevel: number): Promise<string[]> {
+    const { data, error } = await supabase
+        .from('class_prepared_spells')
+        .select('spell_index')
+        .eq('class_index', classIndex)
+        .lte('level_required', characterLevel);
+        
+    if (error) {
+        console.error('Error fetching class prepared spells:', error.message);
+        return [];
+    }
+    
+    return data?.map(row => row.spell_index) || [];
+}
+
+/**
+ * Fetch subclass-based always prepared spells for a character
+ */
+export async function fetchSubclassPreparedSpells(subclassIndex: string, characterLevel: number): Promise<string[]> {
+    const { data, error } = await supabase
+        .from('subclass_prepared_spells')
+        .select('spell_index')
+        .eq('subclass_index', subclassIndex)
+        .lte('level_required', characterLevel);
+        
+    if (error) {
+        console.error('Error fetching subclass prepared spells:', error.message);
+        return [];
+    }
+    
+    return data?.map(row => row.spell_index) || [];
+}

@@ -9,7 +9,13 @@ interface SpelllistProps {
   spellSlots: number[] | null;
 }
 
-const Spelllist: React.FC<SpelllistProps> = ({ spellarray, level, usedSlots, onSlotToggle, spellSlots }) => {
+const Spelllist: React.FC<SpelllistProps> = ({ 
+  spellarray, 
+  level, 
+  usedSlots, 
+  onSlotToggle, 
+  spellSlots
+}) => {
   const [openSpell, setOpenSpell] = useState<string | null>(null);
   const [openLevel, setOpenLevel] = useState<boolean>(false);
 
@@ -55,6 +61,18 @@ const Spelllist: React.FC<SpelllistProps> = ({ spellarray, level, usedSlots, onS
                 {openSpell === spell.name && (
                   <div className="charactersheet-spell-details">
                     <i>{spell.description}</i>
+                    {spell.alwaysRemembered && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        padding: '4px 8px', 
+                        backgroundColor: '#e8f5e8', 
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        color: '#2e7d32'
+                      }}>
+                        ✓ Always Prepared
+                      </div>
+                    )}
                   </div>
                 )}
               </li>

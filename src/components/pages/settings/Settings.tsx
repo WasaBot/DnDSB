@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSettings } from "../../../context/SettingsContext";
+import CacheManager from "../../../utils/cacheManager";
+import type { CacheStatus } from "../../../utils/cacheManager";
 import "./settings.css";
 import supabase from "../../../utils/supabase";
 import {
@@ -14,6 +16,11 @@ const Settings: React.FC = () => {
     // Save/Load state
     const [importString, setImportString] = useState("");
     const [exportString, setExportString] = useState("");
+
+    // Cache management state
+    const [cacheInfo, setCacheInfo] = useState<{ entries: number; tables: string[] }>({ entries: 0, tables: [] });
+    const [cacheStatus, setCacheStatus] = useState<CacheStatus>({ isOnline: true, cacheAvailable: false });
+    const [isClearing, setIsClearing] = useState(false);
 
     // Subclass state
     const [availableSubclasses, setAvailableSubclasses] = useState<Subclass[]>(
@@ -270,6 +277,48 @@ const Settings: React.FC = () => {
         }
     };
 
+    // Cache management functions
+    const handleClearCache = async () => {
+        setIsClearing(true);
+        try {
+            await CacheManager.clearSupabaseCache();
+            const info = await CacheManager.getCacheInfo();
+            setCacheInfo(info);
+            alert('Cache cleared successfully! The app will reload fresh data.');
+        } catch (error) {
+            console.error('Failed to clear cache:', error);
+            alert('Failed to clear cache. Please try again.');
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
+    const handleRefreshTable = async (tableName: string) => {
+        try {
+            await CacheManager.refreshTable(tableName);
+            const info = await CacheManager.getCacheInfo();
+            setCacheInfo(info);
+            alert(`${tableName} cache refreshed!`);
+        } catch (error) {
+            console.error(`Failed to refresh ${tableName}:`, error);
+            alert(`Failed to refresh ${tableName}. Please try again.`);
+        }
+    };
+
+    // Load cache information on component mount
+    useEffect(() => {
+        const loadCacheInfo = async () => {
+            const info = await CacheManager.getCacheInfo();
+            const status = await CacheManager.getCacheStatus();
+            setCacheInfo(info);
+            setCacheStatus(status);
+        };
+        loadCacheInfo();
+
+        const unsubscribe = CacheManager.onStatusChange(setCacheStatus);
+        return unsubscribe;
+    }, []);
+
     return (
         <div>
             <h2>Settings</h2>
@@ -442,6 +491,62 @@ const Settings: React.FC = () => {
                         value={importString}
                         onChange={(e) => setImportString(e.target.value)}
                     />
+                </div>
+            </div>
+            
+            {/* Cache Management */}
+            <div style={{ marginTop: 24 }}>
+                <h4>Cache Management</h4>
+                <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                    <p><strong>Status:</strong> {cacheStatus.isOnline ? 'Online' : 'Offline'}</p>
+                    <p><strong>Cached Entries:</strong> {cacheInfo.entries}</p>
+                    <p><strong>Cached Tables:</strong> {cacheInfo.tables.join(', ') || 'None'}</p>
+                    {cacheStatus.lastSync && (
+                        <p><strong>Last Sync:</strong> {cacheStatus.lastSync.toLocaleString()}</p>
+                    )}
+                    
+                    <div style={{ marginTop: '10px' }}>
+                        <button 
+                            onClick={handleClearCache} 
+                            disabled={isClearing}
+                            style={{ 
+                                backgroundColor: '#f44336', 
+                                color: 'white', 
+                                border: 'none', 
+                                padding: '8px 16px', 
+                                borderRadius: '4px',
+                                marginRight: '10px',
+                                cursor: isClearing ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {isClearing ? 'Clearing...' : 'Clear All Cache'}
+                        </button>
+                        
+                        {cacheInfo.tables.length > 0 && (
+                            <div style={{ marginTop: '10px' }}>
+                                <p><strong>Refresh individual tables:</strong></p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {cacheInfo.tables.map(table => (
+                                        <button 
+                                            key={table}
+                                            onClick={() => handleRefreshTable(table)}
+                                            style={{ 
+                                                padding: '4px 8px', 
+                                                fontSize: '12px',
+                                                backgroundColor: '#2196F3',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '2px',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {table}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

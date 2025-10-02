@@ -1,4 +1,86 @@
-import type { Spell } from "./types/types";
+import type { Spell, Character } from "./types/types";
+import { fetchClassPreparedSpells, fetchSubclassPreparedSpells } from "./dbFuncs";
+
+export type ResourceType = "once" | "proficiency" | "lvl" | "attribute";
+
+export interface ResourceInfo {
+  resourceIndex: string;
+  type: ResourceType;
+  level: number;
+  resetsOn: "short" | "short-long" | "long";
+}
+
+/**
+ * Calculate the number of resource uses based on the resource type and character stats
+ */
+export function calculateResourceAmount(
+  resourceInfo: ResourceInfo,
+  character: any
+): number {
+  switch (resourceInfo.type) {
+    case "once":
+      return 1;
+    
+    case "proficiency":
+      // Proficiency bonus based on character level
+      return Math.ceil(character.level / 4) + 1;
+    
+    case "lvl":
+      return character.level;
+    
+    case "attribute":
+      // This would need additional logic to determine which attribute
+      // For now, return a default based on spellcasting ability
+      const spellcastingAttr = character.class.spellcastingAbility;
+      if (spellcastingAttr) {
+        const attrValue = character.attributes[spellcastingAttr as keyof typeof character.attributes];
+        return Math.floor((attrValue - 10) / 2); // Attribute modifier
+      }
+      return 0;
+    
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Get the resource amount for Sorcery Points specifically
+ * Sorcery Points = Character Level (for Sorcerers)
+ */
+export function getSorceryPointsAmount(character: any): number {
+  if (character.class.name !== "Sorcerer") {
+    return 0;
+  }
+  return character.level;
+}
+
+/**
+ * Reset all character resources that reset on the specified rest type
+ */
+export function resetCharacterResources(characterId: string, restType: "short" | "long") {
+  console.log(`Triggering resource reset for a ${restType} rest.`);
+  // Get all localStorage keys for this character's resources
+  // TODO: Use restType to filter which resources reset on short vs long rest
+  const resourceKeys = Object.keys(localStorage).filter(key => 
+    key.startsWith(`resource_`) && key.endsWith(`_${characterId}`)
+  );
+  
+  resourceKeys.forEach(key => {
+    try {
+      const resourceData = localStorage.getItem(key);
+      if (resourceData) {
+        const parsedData = JSON.parse(resourceData);
+        if (Array.isArray(parsedData)) {
+          // Reset the resource array to all false
+          const resetArray = parsedData.map(() => false);
+          localStorage.setItem(key, JSON.stringify(resetArray));
+        }
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  });
+}
 
 export function groupAndSortSpells(spells: Spell[]) {
   const grouped: Record<number, Spell[]> = {};
@@ -49,4 +131,74 @@ export function generateCharacterId(name: string, className: string, subclass?: 
   } else {
     return `${cleanName}_${cleanClass}`;
   }
+}
+
+/**
+ * Get always prepared spells for a character based on class, subclass, and level
+ */
+export async function getAlwaysPreparedSpells(character: Character): Promise<string[]> {
+  const alwaysPreppedSpells: string[] = [];
+  
+  // Class-based always prepared spells from database
+  const classIndex = character.class.name.toLowerCase().replace(/\s+/g, '-');
+  const classSpells = await fetchClassPreparedSpells(classIndex, character.level);
+  alwaysPreppedSpells.push(...classSpells);
+  
+  // Subclass-based always prepared spells from database
+  if (character.class.subclass) {
+    const subclassIndex = character.class.subclass.name.toLowerCase().replace(/\s+/g, '-');
+    const subclassSpells = await fetchSubclassPreparedSpells(subclassIndex, character.level);
+    alwaysPreppedSpells.push(...subclassSpells);
+  }
+  
+  // Character-specific always prepared spells
+  if (character.alwaysPreparedSpells) {
+    alwaysPreppedSpells.push(...character.alwaysPreparedSpells);
+  }
+  
+  // Remove duplicates
+  return Array.from(new Set(alwaysPreppedSpells));
+}
+
+/**
+ * Toggle always remembered status for a spell for a character
+ */
+export function toggleAlwaysRememberedSpell(characterId: string, spellIndex: string): void {
+  try {
+    const key = `alwaysRemembered_${characterId}`;
+    const stored = localStorage.getItem(key);
+    let alwaysRemembered: string[] = stored ? JSON.parse(stored) : [];
+    
+    if (alwaysRemembered.includes(spellIndex)) {
+      alwaysRemembered = alwaysRemembered.filter(index => index !== spellIndex);
+    } else {
+      alwaysRemembered.push(spellIndex);
+    }
+    
+    localStorage.setItem(key, JSON.stringify(alwaysRemembered));
+  } catch (error) {
+    console.error('Failed to toggle always remembered spell:', error);
+  }
+}
+
+/**
+ * Get always remembered spells for a character
+ */
+export function getAlwaysRememberedSpells(characterId: string): string[] {
+  try {
+    const key = `alwaysRemembered_${characterId}`;
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Failed to get always remembered spells:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if a spell is always remembered for a character
+ */
+export function isSpellAlwaysRemembered(characterId: string, spellIndex: string): boolean {
+  const alwaysRemembered = getAlwaysRememberedSpells(characterId);
+  return alwaysRemembered.includes(spellIndex);
 }

@@ -52,6 +52,7 @@ export type Character = {
     level: number;
     attributes: Attributes;
     spellIndices?: string[];
+    alwaysPreparedSpells?: string[]; // Spells that are always prepared for this character
 };
 
 export type Spell = {
@@ -85,6 +86,7 @@ export type Spell = {
     material?: string;
     aoe?: string;
     aoe_type?: "sphere" | "cube" | "cone" | "line" | "cylinder";
+    alwaysRemembered?: boolean; // Whether this spell is always remembered for the character
 };
 
 export type SettingsContextType = {

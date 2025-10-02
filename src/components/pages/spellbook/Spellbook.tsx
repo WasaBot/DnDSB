@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
 import { fetchSpellByIndex } from "../../../utils/dbFuncs";
+import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered } from "../../../utils/functions";
 import supabase from "../../../utils/supabase";
 
 const Spellbook: React.FC = () => {
@@ -15,12 +16,15 @@ const Spellbook: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showCharacterSpells, setShowCharacterSpells] = useState(false);
+    const [alwaysPreparedSpellIndices, setAlwaysPreparedSpellIndices] = useState<string[]>([]);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
     const filteredSuggestions = allSpells
-        .filter((spell) =>
-            spell.name.toLowerCase().includes(search.toLowerCase())
-        )
+        .filter((spell) => {
+            const matchesSearch = spell.name.toLowerCase().includes(search.toLowerCase());
+            const isNotAlwaysPrepared = !alwaysPreparedSpellIndices.includes(spell.index);
+            return matchesSearch && isNotAlwaysPrepared;
+        })
         .slice(0, 10);
 
     const handleToggleCharacterSpell = (spellIndex: string) => {
@@ -38,6 +42,23 @@ const Spellbook: React.FC = () => {
         });
     };
 
+    const getAlwaysPreparedSpellNames = () => {
+        return alwaysPreparedSpellIndices
+            .map(index => allSpells.find(spell => spell.index === index))
+            .filter(spell => spell)
+            .map(spell => spell!.name)
+            .sort();
+    };
+
+    const handleAlwaysRememberedToggle = async (spellIndex: string) => {
+        toggleAlwaysRememberedSpell(character.id, spellIndex);
+        // Reload always prepared spells to reflect changes
+        const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
+        const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
+        const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
+        setAlwaysPreparedSpellIndices(Array.from(new Set(allAlwaysSpellIndices)));
+    };
+
     useEffect(() => {
         const fetchAllSpells = async (): Promise<any> => {
             const { data, error } = await supabase
@@ -51,6 +72,17 @@ const Spellbook: React.FC = () => {
         };
         fetchAllSpells();
     }, []);
+
+    // Load always prepared spells when character changes
+    useEffect(() => {
+        const loadAlwaysPreparedSpells = async () => {
+            const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
+            const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
+            const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
+            setAlwaysPreparedSpellIndices(Array.from(new Set(allAlwaysSpellIndices)));
+        };
+        loadAlwaysPreparedSpells();
+    }, [character.level, character.class.name, character.class.subclass?.name, character.id]);
 
     const handleSelectSuggestion = async (spellObj: any) => {
         setError(null);
@@ -152,6 +184,42 @@ const Spellbook: React.FC = () => {
                     </ul>
                 )}
             </div>
+            
+            {/* Always Prepared Spells Section */}
+            <div style={{ marginBottom: 16 }}>
+                <div style={{ 
+                    padding: '8px 12px', 
+                    backgroundColor: '#e8f5e8', 
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    border: '1px solid #c8e6c9'
+                }}>
+                    <strong style={{ color: '#2e7d32' }}>
+                        ✓ Always Prepared Spells ({alwaysPreparedSpellIndices.length})
+                    </strong>
+                </div>
+                {alwaysPreparedSpellIndices.length > 0 && (
+                    <ul className="spellbook-myspells-list">
+                        {getAlwaysPreparedSpellNames().map((spellName, index) => (
+                            <li
+                                key={`always-${index}`}
+                                className="spellbook-myspells-listitem"
+                                style={{ backgroundColor: '#f9fff9' }}
+                            >
+                                <span>{spellName}</span>
+                                <span style={{ 
+                                    fontSize: '12px', 
+                                    color: '#2e7d32',
+                                    fontWeight: 'bold'
+                                }}>
+                                    ✓
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+            
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -219,19 +287,29 @@ const Spellbook: React.FC = () => {
                 <div className="spellbook-spell-details">
                     <div className="spellbook-spell-details-header">
                         <h3 style={{ margin: 0 }}>{spell.name}</h3>
-                        <label className="spellbook-spell-details-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={characterSpells.some(
-                                    (charSpell) =>
-                                        charSpell.index === spell.index
-                                )}
-                                onChange={() =>
-                                    handleToggleCharacterSpell(spell.index)
-                                }
-                            />
-                            Add to character
-                        </label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <label className="spellbook-spell-details-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={characterSpells.some(
+                                        (charSpell) =>
+                                            charSpell.index === spell.index
+                                    )}
+                                    onChange={() =>
+                                        handleToggleCharacterSpell(spell.index)
+                                    }
+                                />
+                                Add to character
+                            </label>
+                            <label className="spellbook-spell-details-checkbox" style={{ color: '#2e7d32' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={isSpellAlwaysRemembered(character.id, spell.index)}
+                                    onChange={() => handleAlwaysRememberedToggle(spell.index)}
+                                />
+                                Always remember this spell
+                            </label>
+                        </div>
                     </div>
                     <pre
                         style={{

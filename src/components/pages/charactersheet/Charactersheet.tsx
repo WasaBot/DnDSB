@@ -1,5 +1,6 @@
 import React from "react";
 import { useSettings } from "../../../context/SettingsContext";
+import { useResources } from "../../../context/ResourcesContext";
 import BarbarianResources from "./classes/barbarian/BarbarianResources";
 import BardResources from "./classes/bard/BardResources";
 import ClericResources from "./classes/cleric/ClericResources";
@@ -14,6 +15,7 @@ import WarlockResources from "./classes/warlock/WarlockResources";
 import WizardResources from "./classes/wizard/WizardResources";
 import Spellarea from "../../partials/spellarea/Spellarea";
 import RestButtons from "../../partials/restbuttons/RestButtons";
+import { resetCharacterResources } from "../../../utils/functions";
 import {
     getSpellSaveDC,
     getSpellAttackBonus,
@@ -21,6 +23,7 @@ import {
 
 const CharacterSheet: React.FC = () => {
     const { character } = useSettings();
+    const { triggerReset } = useResources();
     const classResourceMap: Record<string, React.FC> = {
         Barbarian: BarbarianResources,
         Bard: BardResources,
@@ -38,9 +41,14 @@ const CharacterSheet: React.FC = () => {
     const ClassSpecificResources =
         classResourceMap[character.class.name] || null;
 
-    //TODO implement rest functionality for spells and resources
-    const handleLongRest = () => {};
-    const handleShortRest = () => {};
+    const handleLongRest = () => {
+        resetCharacterResources(character.id, "long");
+        triggerReset("long");
+    };
+    const handleShortRest = () => {
+        resetCharacterResources(character.id, "short");
+        triggerReset("short");
+    };
 
     return (
         <>

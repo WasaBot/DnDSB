@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useSettings } from "../../../context/SettingsContext";
+import { useResources } from "../../../context/ResourcesContext";
 import Spelllist from "../spelllist/Spelllist";
-import { groupAndSortSpells } from "../../../utils/functions";
+import { groupAndSortSpells, getAlwaysPreparedSpells, getAlwaysRememberedSpells } from "../../../utils/functions";
 import { fetchSpellsByIndices, fetchSpellslots } from "../../../utils/dbFuncs";
 
 const Spellarea: React.FC = () => {
     const { character } = useSettings();
+    const { resetTrigger } = useResources();
     const [dbSpellDetails, setDbSpellDetails] = useState<Record<string, any>>(
         {}
     );
+    const [alwaysPreparedSpells, setAlwaysPreparedSpells] = useState<Record<string, any>>({});
     const [spellSlots, setSpellSlots] = useState<number[] | null>(null);
     const [usedSlots, setUsedSlots] = useState<Record<number, boolean[]>>(
         () => {
@@ -25,6 +28,7 @@ const Spellarea: React.FC = () => {
     // Fetch spell details when spell indices change
     useEffect(() => {
         const loadSpellDetails = async () => {
+            // Load character's chosen spells
             if (characterSpellIndices.length > 0) {
                 const spellDetails = await fetchSpellsByIndices(
                     characterSpellIndices
@@ -33,9 +37,25 @@ const Spellarea: React.FC = () => {
             } else {
                 setDbSpellDetails({});
             }
+            
+            // Load always prepared spells
+            const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
+            const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
+            const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
+            
+            if (allAlwaysSpellIndices.length > 0) {
+                const alwaysSpellDetails = await fetchSpellsByIndices(allAlwaysSpellIndices);
+                // Mark these spells as always prepared
+                Object.keys(alwaysSpellDetails).forEach(index => {
+                    alwaysSpellDetails[index].alwaysRemembered = alwaysRememberedIndices.includes(index);
+                });
+                setAlwaysPreparedSpells(alwaysSpellDetails);
+            } else {
+                setAlwaysPreparedSpells({});
+            }
         };
         loadSpellDetails();
-    }, []);
+    }, [character.level, character.class.name, character.class.subclass?.name, character.id]);
 
     // Fetch spell slots
     useEffect(() => {
@@ -54,7 +74,21 @@ const Spellarea: React.FC = () => {
     const filteredCharacterSpells = characterSpellIndices
         .map((index) => dbSpellDetails[index])
         .filter((s: any) => s && typeof s.level === "number");
-    const groupedSpells = groupAndSortSpells(filteredCharacterSpells);
+    
+    // Add always prepared spells
+    const filteredAlwaysPreparedSpells = Object.values(alwaysPreparedSpells)
+        .filter((s: any) => s && typeof s.level === "number");
+    
+    // Combine all spells and remove duplicates
+    const allSpells = [...filteredCharacterSpells, ...filteredAlwaysPreparedSpells];
+    const uniqueSpells = allSpells.reduce((acc: any[], spell) => {
+        if (!acc.find(s => s.index === spell.index)) {
+            acc.push(spell);
+        }
+        return acc;
+    }, []);
+    
+    const groupedSpells = groupAndSortSpells(uniqueSpells);
 
     // Create all spell levels (0-9) with spells if available, empty arrays if not
     const allSpellLevels = Array.from({ length: 10 }, (_, i) => ({
@@ -116,6 +150,14 @@ const Spellarea: React.FC = () => {
             setUsedResources(0);
         }
     }, [character.id]);
+
+    // Reset spell slots when rest is triggered
+    useEffect(() => {
+        if (resetTrigger > 0) {
+            setUsedSlots({});
+            setUsedResources(0);
+        }
+    }, [resetTrigger]);
 
     // Spell slot checkbox toggle handler
     const handleSlotToggle = (level: number, idx: number) => {
