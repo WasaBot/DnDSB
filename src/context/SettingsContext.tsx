@@ -39,12 +39,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const importStr = params.get("import");
       if (importStr) {
         try {
-          const decoded = decodeURIComponent(escape(atob(importStr.trim())));
+          const decoded = decodeURIComponent(atob(importStr.trim()));
           const data = JSON.parse(decoded);
           if (data.character) setCharacter(data.character);
-        } catch {
+        } catch (error) {
           // eslint-disable-next-line no-console
-          console.error("Failed to import character from URL.");
+          console.error("Failed to import character from URL.", error);
         }
       }
     }, []);

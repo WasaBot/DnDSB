@@ -3,8 +3,7 @@ const SUPABASE_CACHE = 'supabase-api-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/favicon.ico'
+  '/manifest.json'
 ];
 
 // Cache strategies for different types of data
