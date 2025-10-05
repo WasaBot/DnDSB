@@ -6,6 +6,7 @@ import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRemembe
 import supabase from "../../../utils/supabase";
 import Spelllist from "../../partials/spelllist/Spelllist";
 import type { Spell } from "../../../utils/types/types";
+import { groupAndSortSpells } from "../../../utils/functions";
 
 const Spellbook: React.FC = () => {
     const { character, setCharacter } = useSettings();
@@ -20,6 +21,7 @@ const Spellbook: React.FC = () => {
     const [showCharacterSpells, setShowCharacterSpells] = useState(false);
     const [alwaysPreparedSpellIndices, setAlwaysPreparedSpellIndices] = useState<string[]>([]);
     const [preparedSpells, setPreparedSpells] = useState<Spell[]>([]);
+    const [characterSpells, setCharacterSpells] = useState<Spell[]>([]);
     const [showPreparedSpells, setShowPreparedSpells] = useState(false);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
@@ -61,12 +63,10 @@ const Spellbook: React.FC = () => {
         await loadPreparedSpells();
     };
 
-    const handleRemoveAlwaysRemembered = async (spellIndex: string, spellName: string) => {
-        if (confirm(`Remove "${spellName}" from always remembered spells?`)) {
-            toggleAlwaysRememberedSpell(character.id, spellIndex);
-            await loadAlwaysPreparedSpells();
-            await loadPreparedSpells();
-        }
+    const handleRemoveAlwaysRemembered = async (spellIndex: string) => {        
+        toggleAlwaysRememberedSpell(character.id, spellIndex);
+        await loadAlwaysPreparedSpells();
+        await loadPreparedSpells();
     };
 
     useEffect(() => {
@@ -107,6 +107,23 @@ const Spellbook: React.FC = () => {
         setPreparedSpells(preparedSpellsData);
     };
 
+    const loadCharacterSpells = async () => {
+        const characterSpellIndices: string[] = Array.isArray(character.spellIndices)
+            ? character.spellIndices
+            : [];
+        
+        const characterSpellsData: Spell[] = [];
+        for (const spellIndex of characterSpellIndices) {
+            try {
+                const spellData = await fetchSpellByIndex(spellIndex);
+                characterSpellsData.push(spellData);
+            } catch (error) {
+                console.error(`Failed to fetch character spell ${spellIndex}:`, error);
+            }
+        }
+        setCharacterSpells(characterSpellsData);
+    };
+
     // Load always prepared spells when character changes
     useEffect(() => {
         loadAlwaysPreparedSpells();
@@ -120,6 +137,15 @@ const Spellbook: React.FC = () => {
             setPreparedSpells([]);
         }
     }, [alwaysPreparedSpellIndices]);
+
+    // Load character spells when character.spellIndices changes
+    useEffect(() => {
+        if (character.spellIndices && character.spellIndices.length > 0) {
+            loadCharacterSpells();
+        } else {
+            setCharacterSpells([]);
+        }
+    }, [character.spellIndices]);
 
     const handleSelectSuggestion = async (spellObj: any) => {
         setError(null);
@@ -169,16 +195,8 @@ const Spellbook: React.FC = () => {
             document.removeEventListener("mousedown", handleClickOutside);
     }, [showSuggestions]);
 
-    const characterSpells: { name: string; index: string }[] = Array.isArray(
-        character.spellIndices
-    )
-        ? character.spellIndices.map((index) => ({
-              name:
-                  allSpells.find(
-                      (s: { name: string; index: string }) => s.index === index
-                  )?.name || "Unknown",
-              index,
-          }))
+    const characterSpellIndices: string[] = Array.isArray(character.spellIndices)
+        ? character.spellIndices
         : [];
 
     return (
@@ -194,31 +212,29 @@ const Spellbook: React.FC = () => {
                     {characterSpells.length})
                 </button>
                 {showCharacterSpells && (
-                    <ul className="spellbook-myspells-list">
-                        {characterSpells.length === 0 && (
-                            <li className="spellbook-myspells-empty">
+                    <div style={{ marginTop: '8px' }}>
+                        {characterSpells.length === 0 ? (
+                            <div className="spellbook-myspells-empty" style={{ padding: '16px', fontStyle: 'italic', color: '#666' }}>
                                 No spells added yet.
-                            </li>
+                            </div>
+                        ) : (
+                            /* Group character spells by level */
+                            groupAndSortSpells(characterSpells) &&
+                            Object.entries(groupAndSortSpells(characterSpells))
+                                .sort(([a], [b]) => Number(a) - Number(b))
+                                .map(([level, spells]) => (
+                                    <Spelllist
+                                        key={`char-${level}`}
+                                        spellarray={spells}
+                                        level={Number(level)}
+                                        usedSlots={[]}
+                                        onSlotToggle={() => {}}
+                                        spellSlots={null}
+                                        onRemoveSpell={handleRemoveCharacterSpell}
+                                    />
+                                ))
                         )}
-                        {characterSpells.map((spell) => (
-                            <li
-                                key={spell.index}
-                                className="spellbook-myspells-listitem"
-                            >
-                                <span>{spell.name}</span>
-                                <button
-                                    type="button"
-                                    className="spellbook-myspells-remove-btn"
-                                    onClick={() =>
-                                        handleRemoveCharacterSpell(spell.index)
-                                    }
-                                    title="Remove spell"
-                                >
-                                    ✕
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    </div>
                 )}
             </div>
             
@@ -254,7 +270,6 @@ const Spellbook: React.FC = () => {
                                     />
                                 );
                             })}
-                        
                         {/* Show manually added always remembered spells with remove option */}
                         <div style={{ marginTop: '12px' }}>
                             <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Manually Added:</h5>
@@ -276,7 +291,7 @@ const Spellbook: React.FC = () => {
                                                 <button
                                                     type="button"
                                                     className="spellbook-myspells-remove-btn"
-                                                    onClick={() => spell && handleRemoveAlwaysRemembered(spell.index, spellName)}
+                                                    onClick={() => spell && handleRemoveAlwaysRemembered(spell.index)}
                                                     title="Remove from always remembered"
                                                     style={{ backgroundColor: '#ffebee', color: '#c62828' }}
                                                 >
@@ -367,10 +382,7 @@ const Spellbook: React.FC = () => {
                             <label className="spellbook-spell-details-checkbox">
                                 <input
                                     type="checkbox"
-                                    checked={characterSpells.some(
-                                        (charSpell) =>
-                                            charSpell.index === spell.index
-                                    )}
+                                    checked={characterSpellIndices.includes(spell.index)}
                                     onChange={() =>
                                         handleToggleCharacterSpell(spell.index)
                                     }

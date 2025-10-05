@@ -173,8 +173,6 @@ const Spellarea: React.FC = () => {
         });
     };
 
-    //setUsedResources(0); //TODO: richtig machen
-
     return (
         <>
             {character.class.spellcastingAbility && (
