@@ -1,6 +1,6 @@
 import type { Character } from "./types/types";
 
-function getAbilityModifier(abilityScore: number): number {
+export function getAbilityModifier(abilityScore: number): number {
   return Math.floor((abilityScore - 10) / 2);
 }
 
@@ -18,7 +18,7 @@ export function getSpellAbilityMod(character: Character): number | null {
   }
 }
 
-function getProficiencyBonus(level: number): number {
+export function getProficiencyBonus(level: number): number {
   return 2 + Math.floor((level - 1) / 4);
 }
 

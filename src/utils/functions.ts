@@ -44,17 +44,6 @@ export function calculateResourceAmount(
 }
 
 /**
- * Get the resource amount for Sorcery Points specifically
- * Sorcery Points = Character Level (for Sorcerers)
- */
-export function getSorceryPointsAmount(character: any): number {
-  if (character.class.name !== "Sorcerer") {
-    return 0;
-  }
-  return character.level;
-}
-
-/**
  * Reset all character resources that reset on the specified rest type
  */
 export function resetCharacterResources(characterId: string, restType: "short" | "long") {
