@@ -22,14 +22,24 @@ const Spellbook: React.FC = () => {
     const [alwaysPreparedSpellIndices, setAlwaysPreparedSpellIndices] = useState<string[]>([]);
     const [preparedSpells, setPreparedSpells] = useState<Spell[]>([]);
     const [characterSpells, setCharacterSpells] = useState<Spell[]>([]);
+    const [knownSpells, setKnownSpells] = useState<Spell[]>([]);
     const [showPreparedSpells, setShowPreparedSpells] = useState(false);
+    const [showKnownSpells, setShowKnownSpells] = useState(false);
     const suggestionsRef = useRef<HTMLUListElement>(null);
+
+    // Check if character class uses known spells system
+    const usesKnownSpells = () => {
+        const className = character.class.name.toLowerCase();
+        return ['wizard', 'cleric', 'druid'].includes(className);
+    };
 
     const filteredSuggestions = allSpells
         .filter((spell) => {
             const matchesSearch = spell.name.toLowerCase().includes(search.toLowerCase());
             const isNotAlwaysPrepared = !alwaysPreparedSpellIndices.includes(spell.index);
-            return matchesSearch && isNotAlwaysPrepared;
+            const isNotKnown = usesKnownSpells() ? !(character.knownSpellIndices?.includes(spell.index) || false) : true;
+            const isNotCharacterSpell = !(character.spellIndices?.includes(spell.index) || false);
+            return matchesSearch && isNotAlwaysPrepared && isNotKnown && isNotCharacterSpell;
         })
         .slice(0, 10);
 
@@ -46,6 +56,31 @@ const Spellbook: React.FC = () => {
                 spellIndices: updatedSpells,
             };
         });
+    };
+
+    const handleToggleKnownSpell = (spellIndex: string, _spellName?: string) => {
+        setCharacter((prev) => {
+            const knownSpells: string[] = Array.isArray(prev.knownSpellIndices)
+                ? prev.knownSpellIndices
+                : [];
+            const updatedKnownSpells = knownSpells.includes(spellIndex)
+                ? knownSpells.filter((s: string) => s !== spellIndex)
+                : [...knownSpells, spellIndex];
+            return {
+                ...prev,
+                knownSpellIndices: updatedKnownSpells,
+            };
+        });
+    };
+
+    const handleMoveToPrepared = async (spellIndex: string, _spellName: string) => {
+        // Move from known spells to always remembered
+        toggleAlwaysRememberedSpell(character.id, spellIndex);
+        // Remove from known spells
+        handleToggleKnownSpell(spellIndex);
+        // Reload both lists
+        await loadAlwaysPreparedSpells();
+        await loadPreparedSpells();
     };
 
     const getAlwaysPreparedSpellNames = () => {
@@ -67,6 +102,35 @@ const Spellbook: React.FC = () => {
         toggleAlwaysRememberedSpell(character.id, spellIndex);
         await loadAlwaysPreparedSpells();
         await loadPreparedSpells();
+    };
+
+    const handleMovePreparedToKnown = async (spellIndex: string, spellName: string) => {
+        if (confirm(`Move "${spellName}" back to known spells?`)) {
+            // Remove from character spells (prepared)
+            handleToggleCharacterSpell(spellIndex);
+            // Add to known spells
+            handleToggleKnownSpell(spellIndex);
+            // No need to reload prepared spells since they update automatically
+        }
+    };
+
+    const handleDeletePreparedSpell = async (spellIndex: string, spellName: string) => {
+        if (confirm(`Delete "${spellName}" completely? This will remove it from all lists.`)) {
+            // Remove from character spells (prepared)
+            if (character.spellIndices?.includes(spellIndex)) {
+                handleToggleCharacterSpell(spellIndex);
+            }
+            // Remove from known spells if present
+            if (character.knownSpellIndices?.includes(spellIndex)) {
+                handleToggleKnownSpell(spellIndex);
+            }
+            // Remove from always remembered if present
+            if (getAlwaysRememberedSpells(character.id).includes(spellIndex)) {
+                toggleAlwaysRememberedSpell(character.id, spellIndex);
+                await loadAlwaysPreparedSpells();
+                await loadPreparedSpells();
+            }
+        }
     };
 
     useEffect(() => {
@@ -124,6 +188,23 @@ const Spellbook: React.FC = () => {
         setCharacterSpells(characterSpellsData);
     };
 
+    const loadKnownSpells = async () => {
+        const knownSpellIndices: string[] = Array.isArray(character.knownSpellIndices)
+            ? character.knownSpellIndices
+            : [];
+        
+        const knownSpellsData: Spell[] = [];
+        for (const spellIndex of knownSpellIndices) {
+            try {
+                const spellData = await fetchSpellByIndex(spellIndex);
+                knownSpellsData.push(spellData);
+            } catch (error) {
+                console.error(`Failed to fetch known spell ${spellIndex}:`, error);
+            }
+        }
+        setKnownSpells(knownSpellsData);
+    };
+
     // Load always prepared spells when character changes
     useEffect(() => {
         loadAlwaysPreparedSpells();
@@ -146,6 +227,15 @@ const Spellbook: React.FC = () => {
             setCharacterSpells([]);
         }
     }, [character.spellIndices]);
+
+    // Load known spells when character.knownSpellIndices changes
+    useEffect(() => {
+        if (usesKnownSpells() && character.knownSpellIndices && character.knownSpellIndices.length > 0) {
+            loadKnownSpells();
+        } else {
+            setKnownSpells([]);
+        }
+    }, [character.knownSpellIndices, character.class.name]);
 
     const handleSelectSuggestion = async (spellObj: any) => {
         setError(null);
@@ -208,7 +298,7 @@ const Spellbook: React.FC = () => {
                     className="spellbook-myspells-btn"
                     onClick={() => setShowCharacterSpells((v) => !v)}
                 >
-                    {showCharacterSpells ? "▼" : "►"} My Spells (
+                    {showCharacterSpells ? "▼" : "►"} Prepared Spells (
                     {characterSpells.length})
                 </button>
                 {showCharacterSpells && (
@@ -231,6 +321,9 @@ const Spellbook: React.FC = () => {
                                         onSlotToggle={() => {}}
                                         spellSlots={null}
                                         onRemoveSpell={handleRemoveCharacterSpell}
+                                        onMoveToKnown={handleMovePreparedToKnown}
+                                        onDeleteSpell={handleDeletePreparedSpell}
+                                        usesKnownSpells={usesKnownSpells()}
                                     />
                                 ))
                         )}
@@ -267,6 +360,7 @@ const Spellbook: React.FC = () => {
                                         usedSlots={[]}
                                         onSlotToggle={() => {}}
                                         spellSlots={null}
+                                        usesKnownSpells={usesKnownSpells()}
                                     />
                                 );
                             })}
@@ -310,6 +404,51 @@ const Spellbook: React.FC = () => {
                     </div>
                 )}
             </div>
+            
+            {/* Known Spells Section - Only for Wizard, Cleric, Druid */}
+            {usesKnownSpells() && (
+                <div style={{ marginBottom: 16 }}>
+                    <button
+                        type="button"
+                        className="spellbook-myspells-btn"
+                        onClick={() => setShowKnownSpells((v) => !v)}
+                        style={{ 
+                            backgroundColor: '#fff3e0', 
+                            border: '1px solid #ffcc02',
+                            color: '#f57c00'
+                        }}
+                    >
+                        {showKnownSpells ? "▼" : "►"} 📜 Known Spells ({knownSpells.length})
+                    </button>
+                    {showKnownSpells && (
+                        <div style={{ marginTop: '8px' }}>
+                            {knownSpells.length === 0 ? (
+                                <div className="spellbook-myspells-empty" style={{ padding: '16px', fontStyle: 'italic', color: '#666' }}>
+                                    No known spells yet. Add spells using the search below.
+                                </div>
+                            ) : (
+                                /* Group known spells by level */
+                                groupAndSortSpells(knownSpells) &&
+                                Object.entries(groupAndSortSpells(knownSpells))
+                                    .sort(([a], [b]) => Number(a) - Number(b))
+                                    .map(([level, spells]) => (
+                                        <Spelllist
+                                            key={`known-${level}`}
+                                            spellarray={spells}
+                                            level={Number(level)}
+                                            usedSlots={[]}
+                                            onSlotToggle={() => {}}
+                                            spellSlots={null}
+                                            onRemoveSpell={handleToggleKnownSpell}
+                                            onMoveToPrepared={handleMoveToPrepared}
+                                            usesKnownSpells={usesKnownSpells()}
+                                        />
+                                    ))
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
             
             <form
                 onSubmit={(e) => {
@@ -387,8 +526,18 @@ const Spellbook: React.FC = () => {
                                         handleToggleCharacterSpell(spell.index)
                                     }
                                 />
-                                Add to character
+                                Add to character spells
                             </label>
+                            {usesKnownSpells() && (
+                                <label className="spellbook-spell-details-checkbox" style={{ color: '#f57c00' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={character.knownSpellIndices?.includes(spell.index) || false}
+                                        onChange={() => handleToggleKnownSpell(spell.index)}
+                                    />
+                                    Add to known spells
+                                </label>
+                            )}
                             <label className="spellbook-spell-details-checkbox" style={{ color: '#2e7d32' }}>
                                 <input
                                     type="checkbox"

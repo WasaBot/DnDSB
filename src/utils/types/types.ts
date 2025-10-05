@@ -51,7 +51,8 @@ export type Character = {
     class: Class;
     level: number;
     attributes: Attributes;
-    spellIndices?: string[];
+    spellIndices?: string[]; // Prepared spells
+    knownSpellIndices?: string[]; // Known spells that can be prepared
     alwaysPreparedSpells?: string[]; // Spells that are always prepared for this character
 };
 
