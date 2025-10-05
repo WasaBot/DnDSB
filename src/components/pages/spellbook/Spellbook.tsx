@@ -4,6 +4,8 @@ import "./spellbook.css";
 import { fetchSpellByIndex } from "../../../utils/dbFuncs";
 import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered } from "../../../utils/functions";
 import supabase from "../../../utils/supabase";
+import Spelllist from "../../partials/spelllist/Spelllist";
+import type { Spell } from "../../../utils/types/types";
 
 const Spellbook: React.FC = () => {
     const { character, setCharacter } = useSettings();
@@ -17,6 +19,8 @@ const Spellbook: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showCharacterSpells, setShowCharacterSpells] = useState(false);
     const [alwaysPreparedSpellIndices, setAlwaysPreparedSpellIndices] = useState<string[]>([]);
+    const [preparedSpells, setPreparedSpells] = useState<Spell[]>([]);
+    const [showPreparedSpells, setShowPreparedSpells] = useState(false);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
     const filteredSuggestions = allSpells
@@ -53,10 +57,16 @@ const Spellbook: React.FC = () => {
     const handleAlwaysRememberedToggle = async (spellIndex: string) => {
         toggleAlwaysRememberedSpell(character.id, spellIndex);
         // Reload always prepared spells to reflect changes
-        const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
-        const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
-        const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
-        setAlwaysPreparedSpellIndices(Array.from(new Set(allAlwaysSpellIndices)));
+        await loadAlwaysPreparedSpells();
+        await loadPreparedSpells();
+    };
+
+    const handleRemoveAlwaysRemembered = async (spellIndex: string, spellName: string) => {
+        if (confirm(`Remove "${spellName}" from always remembered spells?`)) {
+            toggleAlwaysRememberedSpell(character.id, spellIndex);
+            await loadAlwaysPreparedSpells();
+            await loadPreparedSpells();
+        }
     };
 
     useEffect(() => {
@@ -73,16 +83,43 @@ const Spellbook: React.FC = () => {
         fetchAllSpells();
     }, []);
 
+    const loadAlwaysPreparedSpells = async () => {
+        const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
+        const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
+        const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
+        setAlwaysPreparedSpellIndices(Array.from(new Set(allAlwaysSpellIndices)));
+    };
+
+    const loadPreparedSpells = async () => {
+        const preparedSpellsData: Spell[] = [];
+        for (const spellIndex of alwaysPreparedSpellIndices) {
+            try {
+                const spellData = await fetchSpellByIndex(spellIndex);
+                const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
+                preparedSpellsData.push({
+                    ...spellData,
+                    alwaysRemembered: alwaysRememberedIndices.includes(spellIndex)
+                });
+            } catch (error) {
+                console.error(`Failed to fetch spell ${spellIndex}:`, error);
+            }
+        }
+        setPreparedSpells(preparedSpellsData);
+    };
+
     // Load always prepared spells when character changes
     useEffect(() => {
-        const loadAlwaysPreparedSpells = async () => {
-            const alwaysPreparedIndices = await getAlwaysPreparedSpells(character);
-            const alwaysRememberedIndices = getAlwaysRememberedSpells(character.id);
-            const allAlwaysSpellIndices = [...alwaysPreparedIndices, ...alwaysRememberedIndices];
-            setAlwaysPreparedSpellIndices(Array.from(new Set(allAlwaysSpellIndices)));
-        };
         loadAlwaysPreparedSpells();
     }, [character.level, character.class.name, character.class.subclass?.name, character.id]);
+
+    // Load prepared spells when always prepared indices change
+    useEffect(() => {
+        if (alwaysPreparedSpellIndices.length > 0) {
+            loadPreparedSpells();
+        } else {
+            setPreparedSpells([]);
+        }
+    }, [alwaysPreparedSpellIndices]);
 
     const handleSelectSuggestion = async (spellObj: any) => {
         setError(null);
@@ -187,36 +224,75 @@ const Spellbook: React.FC = () => {
             
             {/* Always Prepared Spells Section */}
             <div style={{ marginBottom: 16 }}>
-                <div style={{ 
-                    padding: '8px 12px', 
-                    backgroundColor: '#e8f5e8', 
-                    borderRadius: '4px',
-                    marginBottom: '8px',
-                    border: '1px solid #c8e6c9'
-                }}>
-                    <strong style={{ color: '#2e7d32' }}>
-                        ✓ Always Prepared Spells ({alwaysPreparedSpellIndices.length})
-                    </strong>
-                </div>
-                {alwaysPreparedSpellIndices.length > 0 && (
-                    <ul className="spellbook-myspells-list">
-                        {getAlwaysPreparedSpellNames().map((spellName, index) => (
-                            <li
-                                key={`always-${index}`}
-                                className="spellbook-myspells-listitem"
-                                style={{ backgroundColor: '#f9fff9' }}
-                            >
-                                <span>{spellName}</span>
-                                <span style={{ 
-                                    fontSize: '12px', 
-                                    color: '#2e7d32',
-                                    fontWeight: 'bold'
-                                }}>
-                                    ✓
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
+                <button
+                    type="button"
+                    className="spellbook-myspells-btn"
+                    onClick={() => setShowPreparedSpells((v) => !v)}
+                    style={{ 
+                        backgroundColor: '#e8f5e8', 
+                        border: '1px solid #c8e6c9',
+                        color: '#2e7d32'
+                    }}
+                >
+                    {showPreparedSpells ? "▼" : "►"} ✓ Always Prepared Spells ({alwaysPreparedSpellIndices.length})
+                </button>
+                {showPreparedSpells && alwaysPreparedSpellIndices.length > 0 && (
+                    <div style={{ marginTop: '8px' }}>
+                        {/* Group spells by level */}
+                        {Array.from(new Set(preparedSpells.map(spell => spell.level)))
+                            .sort((a, b) => a - b)
+                            .map(level => {
+                                const spellsOfLevel = preparedSpells.filter(spell => spell.level === level);
+                                return (
+                                    <Spelllist
+                                        key={level}
+                                        spellarray={spellsOfLevel}
+                                        level={level}
+                                        usedSlots={[]}
+                                        onSlotToggle={() => {}}
+                                        spellSlots={null}
+                                    />
+                                );
+                            })}
+                        
+                        {/* Show manually added always remembered spells with remove option */}
+                        <div style={{ marginTop: '12px' }}>
+                            <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Manually Added:</h5>
+                            <ul className="spellbook-myspells-list">
+                                {getAlwaysPreparedSpellNames()
+                                    .filter(spellName => {
+                                        const spell = allSpells.find(s => s.name === spellName);
+                                        return spell && getAlwaysRememberedSpells(character.id).includes(spell.index);
+                                    })
+                                    .map((spellName) => {
+                                        const spell = allSpells.find(s => s.name === spellName);
+                                        return (
+                                            <li
+                                                key={`manual-${spell?.index}`}
+                                                className="spellbook-myspells-listitem"
+                                                style={{ backgroundColor: '#f9fff9' }}
+                                            >
+                                                <span>{spellName}</span>
+                                                <button
+                                                    type="button"
+                                                    className="spellbook-myspells-remove-btn"
+                                                    onClick={() => spell && handleRemoveAlwaysRemembered(spell.index, spellName)}
+                                                    title="Remove from always remembered"
+                                                    style={{ backgroundColor: '#ffebee', color: '#c62828' }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </li>
+                                        );
+                                    })}
+                                {getAlwaysRememberedSpells(character.id).length === 0 && (
+                                    <li className="spellbook-myspells-empty" style={{ fontStyle: 'italic', color: '#666' }}>
+                                        No manually added spells.
+                                    </li>
+                                )}
+                            </ul>
+                        </div>
+                    </div>
                 )}
             </div>
             

@@ -30,7 +30,7 @@ const Spelllist: React.FC<SpelllistProps> = ({
           {openLevel ? "▼" : "►"} {level === 0 ? "Cantrips" : `Level ${level}`}{" "}
         </button>
         <span className="charactersheet-spelllevel-checkboxes">
-          {Array.from({ length: spellSlots?.[level - 1] || 0 }).map(
+          {spellSlots?.[level - 1] ? Array.from({ length: spellSlots[level - 1] }).map(
             (_, idx) => (
               <label key={idx}>
                 <input
@@ -40,7 +40,7 @@ const Spelllist: React.FC<SpelllistProps> = ({
                 />
               </label>
             )
-          )}
+          ) : null}
         </span>
         {openLevel && (
           <ul className="charactersheet-spell-list">
