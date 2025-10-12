@@ -90,3 +90,51 @@ export async function fetchSubclassPreparedSpells(subclassIndex: string, charact
     
     return data?.map(row => row.spell_index) || [];
 }
+export async function fetchDmgCharLvl(spellIndex: string): Promise<any | null> {
+    const { data, error } = await supabase
+        .from('spell_dmg_char_lvl')
+        .select('1,5,11,17')
+        .eq('index', spellIndex)
+        .maybeSingle();
+    if (error) {
+        console.error('Error fetching damage at character level:', error.message);
+        return null;
+    }
+    return data || null;
+}
+export async function fetchSpellAtSlot(spellIndex: string, healOrDmg: 'heal' | 'dmg'): Promise<{[key: number]: string} | null> {
+    const { data, error } = await supabase
+        .from(healOrDmg === 'heal' ? 'spell_heal_slot_lvl' : 'spell_dmg_slot_lvl')
+        .select('1,2,3,4,5,6,7,8,9')
+        .eq('index', spellIndex)
+        .single();
+    if (error) {
+        console.error('Error fetching healing at higher slot:', error.message);
+        return null;
+    }
+    return data || null;
+}
+export async function fetchSpellTable(spellIndex: string): Promise<JSON> {
+    const { data, error } = await supabase
+        .from('spell_desc_table')
+        .select('data')
+        .eq('index', spellIndex)
+        .single();
+    if (error) {
+        console.error('Error fetching spell table:', error.message);
+        return {} as JSON;
+    }
+    return data.data as unknown as JSON || {} as JSON;
+}
+export async function fetchSpellAdditionalDesc(spellIndex: string): Promise<string[]> {
+    const { data, error } = await supabase
+        .from('spell_desc_additional')
+        .select('desc')
+        .eq('index', spellIndex)
+        .single();
+    if (error) {
+        console.error('Error fetching spell additional description:', error.message);
+        return [];
+    }
+    return data ? data.desc : [];
+}

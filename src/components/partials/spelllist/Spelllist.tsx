@@ -56,7 +56,7 @@ const Spelllist: React.FC<SpelllistProps> = ({
             </span>
             {openLevel && (
                 <ul className="charactersheet-spell-list">
-                    {spellarray.map((spell: any) => (
+                    {spellarray.map((spell: Spell & { Prepared?: boolean }) => (
                         <li
                             key={spell.name}
                             className="charactersheet-spell-listitem"
@@ -168,7 +168,7 @@ const Spelllist: React.FC<SpelllistProps> = ({
                             </div>
                             {openSpell === spell.name && (
                                 <div className="charactersheet-spell-details">
-                                    <i>{spell.description}</i>
+                                    <i>{spell.desc}</i>
                                     {spell.Prepared && (
                                         <div
                                             style={{

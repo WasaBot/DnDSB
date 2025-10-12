@@ -23,6 +23,7 @@ export const AttributeNames = [
     "Charisma",
 ];
 export type AttributeName = (typeof AttributeNames)[number];
+export type SpellComponents = 'V' | 'S' | 'M' | 'VS' | 'VM' | 'SM' | 'VSM';
 
 interface Class {
     name: ClassName;
@@ -57,37 +58,32 @@ export type Character = {
 };
 
 export type Spell = {
-    index: string;
-    name: string;
-    level: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-    description: string;
-    castingTime:
-        | "1 Action"
-        | "1 Bonus Action"
-        | "1 Reaction"
-        | "10 Minutes"
-        | "1 Minute"
-        | "Special";
-    range: string;
-    components: "V" | "S" | "M" | "VS" | "VM" | "SM" | "VSM";
-    duration: string;
-    ritual: boolean;
+    additionalDesc: boolean;
+    alwaysRemembered?: boolean;
+    aoeSize?: number;
+    aoeType?: string;
+    atHigherLevel?: string;
+    attackType: string;
+    castingTime: string;
+    components: SpellComponents;
     concentration: boolean;
-    school: string;
-    attackType?: "Melee" | "Ranged" | "Melee or Ranged" | "Save";
-    spellSaveDc?: {
-        dcType: AttributeName;
-        dcSuccess: "None" | "Half" | "Negates";
-    };
-    damage?: {
-        damageType: string;
-        damageAtSlotLevel: { [key: string]: string };
-    };
-    healAtSlotLevel?: { [key: string]: string };
+    damageType?: string;
+    dcDesc?: string;
+    dcSuccess?: string;
+    desc: string;
+    dmgAtCharLvl?: string;
+    dmgAtHigherSlot?: boolean;
+    duration: string;
+    hasTable: boolean;
+    healAtHigherSlot?: boolean;
+    index: string;
+    level: number;
     material?: string;
-    aoe?: string;
-    aoe_type?: "sphere" | "cube" | "cone" | "line" | "cylinder";
-    alwaysRemembered?: boolean; // Whether this spell is always remembered for the character
+    name: string;
+    range: string;
+    ritual: boolean;
+    school: string;
+    spellSaveDcType?: string;
 };
 
 export type SettingsContextType = {

@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
-import { fetchSpellByIndex } from "../../../utils/dbFuncs";
+import { fetchDmgCharLvl, fetchSpellAdditionalDesc, fetchSpellAtSlot, fetchSpellByIndex, fetchSpellTable } from "../../../utils/dbFuncs";
 import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered } from "../../../utils/functions";
 import supabase from "../../../utils/supabase";
 import Spelllist from "../../partials/spelllist/Spelllist";
 import type { Spell } from "../../../utils/types/types";
 import { groupAndSortSpells } from "../../../utils/functions";
+import { TbCone2, TbSphere } from "react-icons/tb";
+import { GiArrowhead, GiBrain, GiCube, GiDeathSkull, GiFire, GiHammerDrop, GiLightningBranches, GiNuclear, GiPoisonBottle, GiQuickSlash, GiSpeaker, GiSunbeams, GiTensionSnowflake, GiWindHole } from "react-icons/gi";
+import { PiCylinder } from "react-icons/pi";
 
 const Spellbook: React.FC = () => {
     const { character, setCharacter } = useSettings();
@@ -15,7 +18,7 @@ const Spellbook: React.FC = () => {
         { name: string; index: string }[]
     >([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [spell, setSpell] = useState<any | null>(null);
+    const [spell, setSpell] = useState<Spell | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showCharacterSpells, setShowCharacterSpells] = useState(false);
@@ -25,9 +28,11 @@ const Spellbook: React.FC = () => {
     const [knownSpells, setKnownSpells] = useState<Spell[]>([]);
     const [showPreparedSpells, setShowPreparedSpells] = useState(false);
     const [showKnownSpells, setShowKnownSpells] = useState(false);
+    const [spellDamage, setSpellDamage] = useState<string | null>(null);
+    const [spellAdditionalDesc, setSpellAdditionalDesc] = useState<string[] | null>(null);
+    const [spellTableData, setSpellTableData] = useState<JSON | null>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
-    // Check if character class uses known spells system
     const usesKnownSpells = () => {
         const className = character.class.name.toLowerCase();
         return ['wizard', 'cleric', 'druid'].includes(className);
@@ -289,10 +294,137 @@ const Spellbook: React.FC = () => {
         ? character.spellIndices
         : [];
 
+    function formatSpellLvl(level: number, school: string) {
+        switch(level){
+            case 0: return `${school.charAt(0).toUpperCase() + school.slice(1)} Cantrip`;
+            case 1 : return `1st-level ${school.charAt(0).toUpperCase() + school.slice(1)}`;
+            case 2 : return `2nd-level ${school.charAt(0).toUpperCase() + school.slice(1)}`;
+            case 3 : return `3rd-level ${school.charAt(0).toUpperCase() + school.slice(1)}`;
+            default: return `${level}th-level ${school.charAt(0).toUpperCase() + school.slice(1)}`;
+        }
+    }
+
+    function formatComponents(components: string, material?: string) {
+        return components.split("").join(", ") + (material ? ` (${material})` : "");
+    }
+
+    function formatSpellAttackType(){
+        if(spell == null) return null;
+        if(spell.attackType){
+            return <p>Attack: {spell.attackType}-attack</p>;
+        } else if(spell.spellSaveDcType){
+            const res = <div>
+                <p>DC: {spell.spellSaveDcType.charAt(0).toUpperCase() + spell.spellSaveDcType.slice(1)}{spell.dcSuccess ? ', on success: ' + spell.dcSuccess : ''}</p>
+                <p>{spell.dcDesc ? ', ' + spell.dcDesc :  ''}</p>
+            </div>
+            return res;
+        }
+    }
+
+    function mapAoETypeIcons(type: string | undefined) {
+        switch(type?.toLowerCase()){
+            case 'cone': return <TbCone2 />;
+            case 'cube': return <GiCube />;
+            case 'line': return "|";
+            case 'sphere': return <TbSphere />;
+            case 'cylinder': return <PiCylinder />;
+            default: return null;            
+        }
+    }
+
+    function mapDamageTypeIcons(type: string) {
+        switch(type.toLowerCase()){
+            case 'acid': return <GiNuclear />;
+            case 'bludgeoning': return <GiHammerDrop />;
+            case 'cold': return <GiTensionSnowflake />;
+            case 'fire': return <GiFire />;
+            case 'force': return <GiWindHole />;
+            case 'lightning': return <GiLightningBranches />;
+            case 'necrotic': return <GiDeathSkull />;
+            case 'piercing': return <GiArrowhead />;
+            case 'poison': return <GiPoisonBottle />;
+            case 'psychic': return <GiBrain />;
+            case 'radiant': return <GiSunbeams />;
+            case 'slashing': return <GiQuickSlash />;
+            case 'thunder': return <GiSpeaker />;
+            default: return null;            
+        }
+    }
+
+    useEffect(() => {
+        const fetchSpellDamage = async () => {
+            if (spell?.dmgAtCharLvl) {
+                try {
+                    const data = await fetchDmgCharLvl(spell.index);
+                    setSpellDamage(
+                        character.level < 5 ? data?.['1'] :
+                        character.level < 11 ? data?.['5'] :
+                        character.level < 17 ? data?.['11'] :
+                        data?.['17'] ||
+                        null);
+                } catch (error) {
+                    console.error('Error fetching spell damage:', error);
+                    setSpellDamage(null);
+                }                
+            }  else if(spell?.dmgAtHigherSlot){
+                try {
+                    const data = await fetchSpellAtSlot(spell.index, 'dmg');
+                    setSpellDamage('1: ' + data?.['1'] + 
+                        ', 2: ' + data?.['2'] + 
+                        ', 3: ' + data?.['3'] + 
+                        ', 4: ' + data?.['4'] + 
+                        ', 5: ' + data?.['5'] + 
+                        ', 6: ' + data?.['6'] + 
+                        ', 7: ' + data?.['7'] + 
+                        ', 8: ' + data?.['8'] + 
+                        ', 9: ' + data?.['9'] || null);
+                } catch (error) {
+                    console.error('Error fetching spell damage:', error);
+                    setSpellDamage(null);
+                }
+            }
+            else {
+                setSpellDamage(null);
+            }
+        };
+
+        fetchSpellDamage();
+    }, [spell]);
+
+    useEffect(() => {
+        const fetchSpellAdditionalInfo = async () => {
+            if (spell?.additionalDesc) {
+                try {
+                    const data = await fetchSpellAdditionalDesc(spell.index);
+                    setSpellAdditionalDesc(data || null);
+                } catch (error) {
+                    console.error('Error fetching spell additional description:', error);
+                    setSpellAdditionalDesc(null);
+                }
+            } else {
+                setSpellAdditionalDesc(null);
+            }
+            if(spell?.hasTable){
+                try {
+                    const data = await fetchSpellTable(spell.index);
+                    console.log(data);
+                    setSpellTableData(data || null);
+                } catch (error) {
+                    console.error('Error fetching spell table data:', error);
+                    setSpellTableData(null);
+                }
+            } else {
+                setSpellTableData(null);
+            }
+        }
+
+        fetchSpellAdditionalInfo();
+    }, [spell]);
+
     return (
         <div>
             <h2>Spellbook</h2>
-            <div style={{ marginBottom: 16 }}>
+            {character.class.spellcastingAbility && <div style={{ marginBottom: 16 }}>
                 <button
                     type="button"
                     className="spellbook-myspells-btn"
@@ -329,10 +461,10 @@ const Spellbook: React.FC = () => {
                         )}
                     </div>
                 )}
-            </div>
+            </div>}
             
             {/* Always Prepared Spells Section */}
-            <div style={{ marginBottom: 16 }}>
+            {character.class.spellcastingAbility && <div style={{ marginBottom: 16 }}>
                 <button
                     type="button"
                     className="spellbook-myspells-btn"
@@ -403,7 +535,7 @@ const Spellbook: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
+            </div>}
             
             {/* Known Spells Section - Only for Wizard, Cleric, Druid */}
             {usesKnownSpells() && (
@@ -517,7 +649,7 @@ const Spellbook: React.FC = () => {
                 <div className="spellbook-spell-details">
                     <div className="spellbook-spell-details-header">
                         <h3 style={{ margin: 0 }}>{spell.name}</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {character.class.spellcastingAbility && <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <label className="spellbook-spell-details-checkbox">
                                 <input
                                     type="checkbox"
@@ -546,16 +678,59 @@ const Spellbook: React.FC = () => {
                                 />
                                 Always remember this spell
                             </label>
-                        </div>
+                        </div>}
                     </div>
-                    <pre
-                        style={{
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                        }}
-                    >
-                        {JSON.stringify(spell, null, 2)}
-                    </pre>
+                    <p>{formatSpellLvl(spell.level,spell.school)} {spell.ritual ? '(ritual)' : ''}</p>
+                    <p>Casting Time: {spell.castingTime}</p>
+                    <p>Range: {spell.range}</p>
+                    {formatSpellAttackType()}
+                    {spell.aoeSize && <p>AoE: {spell.aoeSize} feet {mapAoETypeIcons(spell.aoeType)}</p>}
+                    <p>Components: {formatComponents(spell.components, spell.material)}</p>
+                    {spell.duration && <p>Duration: {spell.concentration ? 'Concentration, ':''} {spell.duration}</p>}
+                    {spell.damageType && <div>Damage: {spellDamage} {mapDamageTypeIcons(spell.damageType)}</div>}
+                    <p>{spell.desc}</p>
+                    {spell.additionalDesc && <div>{spellAdditionalDesc}</div>//TODO: hier noch listen und fett formatieren
+                    }
+                    {spell.atHigherLevel && <p>At Higher Levels: {spell.atHigherLevel}</p>}
+                    {spell.hasTable && spellTableData && (
+                        <div style={{ margin: '16px 0' }}>
+                            <table style={{ 
+                                borderCollapse: 'collapse', 
+                                width: '100%',
+                                border: '1px solid #ccc'
+                            }}>
+                                <thead>
+                                    <tr>
+                                        {Object.keys(spellTableData as any).map(header => (
+                                            <th key={header} style={{ 
+                                                border: '1px solid #ccc',
+                                                padding: '8px',
+                                                backgroundColor: '#f5f5f5',
+                                                textAlign: 'left',
+                                                textTransform: 'capitalize'
+                                            }}>
+                                                {header}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {Array.from({ length: Math.max(...Object.values(spellTableData as any).map((arr: any) => arr?.length || 0)) }).map((_, rowIndex) => (
+                                        <tr key={rowIndex}>
+                                            {Object.values(spellTableData as any).map((column: any, colIndex) => (
+                                                <td key={colIndex} style={{ 
+                                                    border: '1px solid #ccc',
+                                                    padding: '8px'
+                                                }}>
+                                                    {column?.[rowIndex] || ''}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

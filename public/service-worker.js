@@ -81,9 +81,7 @@ async function handleSupabaseRequest(event) {
   const cached = await cache.match(request);
 
   // Cache-first strategy: return cached data immediately if available
-  if (cached) {
-    console.log(`Serving ${table} from cache (cache-first)`);
-    
+  if (cached) {  
     // Update cache in background if expired
     const cacheTime = cached.headers.get('sw-cache-time');
     if (cacheTime && isExpired(parseInt(cacheTime), strategy)) {
@@ -101,7 +99,6 @@ async function handleSupabaseRequest(event) {
           });
           
           cache.put(request, cachedResponse);
-          console.log(`Background updated ${table} cache`);
         }
       }).catch(error => {
         console.log(`Background update failed for ${table}:`, error);
@@ -113,7 +110,6 @@ async function handleSupabaseRequest(event) {
 
   // No cache available, fetch from network
   try {
-    console.log(`Fetching ${table} from network (no cache)`);
     const response = await fetch(request);
     
     if (response.ok) {
