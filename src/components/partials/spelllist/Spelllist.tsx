@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Spell } from "../../../utils/types/types";
+import { mapDamageTypeIcons } from "../../../utils/functions";
 
 interface SpelllistProps {
   spellarray: Spell[];
@@ -74,7 +75,7 @@ const Spelllist: React.FC<SpelllistProps> = ({
                                 <span>
                                     <b>{spell.name}</b> | {spell.castingTime} |{" "}
                                     {spell.range} | {spell.components} |{" "}
-                                    {spell.duration}
+                                    {spell.duration} | {spell.attackType ?? spell.spellSaveDcType} | {mapDamageTypeIcons(spell.damageType) ?? spell.healAtHigherSlot ? spell.damageType : ""}
                                 </span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {onMoveToPrepared && usesKnownSpells && (
@@ -174,10 +175,8 @@ const Spelllist: React.FC<SpelllistProps> = ({
                                             style={{
                                                 marginTop: "8px",
                                                 padding: "4px 8px",
-                                                backgroundColor: "#e8f5e8",
                                                 borderRadius: "4px",
                                                 fontSize: "12px",
-                                                color: "#2e7d32",
                                             }}
                                         >
                                             ✓ Always Prepared

@@ -2,14 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
 import { fetchDmgCharLvl, fetchSpellAdditionalDesc, fetchSpellAtSlot, fetchSpellByIndex, fetchSpellTable } from "../../../utils/dbFuncs";
-import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered } from "../../../utils/functions";
+import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered, mapAoETypeIcons, mapDamageTypeIcons } from "../../../utils/functions";
 import supabase from "../../../utils/supabase";
 import Spelllist from "../../partials/spelllist/Spelllist";
 import type { Spell } from "../../../utils/types/types";
 import { groupAndSortSpells } from "../../../utils/functions";
-import { TbCone2, TbSphere } from "react-icons/tb";
-import { GiArrowhead, GiBrain, GiCube, GiDeathSkull, GiFire, GiHammerDrop, GiLightningBranches, GiNuclear, GiPoisonBottle, GiQuickSlash, GiSpeaker, GiSunbeams, GiTensionSnowflake, GiWindHole } from "react-icons/gi";
-import { PiCylinder } from "react-icons/pi";
 
 const Spellbook: React.FC = () => {
     const { character, setCharacter } = useSettings();
@@ -321,36 +318,6 @@ const Spellbook: React.FC = () => {
         }
     }
 
-    function mapAoETypeIcons(type: string | undefined) {
-        switch(type?.toLowerCase()){
-            case 'cone': return <TbCone2 />;
-            case 'cube': return <GiCube />;
-            case 'line': return "|";
-            case 'sphere': return <TbSphere />;
-            case 'cylinder': return <PiCylinder />;
-            default: return null;            
-        }
-    }
-
-    function mapDamageTypeIcons(type: string) {
-        switch(type.toLowerCase()){
-            case 'acid': return <GiNuclear />;
-            case 'bludgeoning': return <GiHammerDrop />;
-            case 'cold': return <GiTensionSnowflake />;
-            case 'fire': return <GiFire />;
-            case 'force': return <GiWindHole />;
-            case 'lightning': return <GiLightningBranches />;
-            case 'necrotic': return <GiDeathSkull />;
-            case 'piercing': return <GiArrowhead />;
-            case 'poison': return <GiPoisonBottle />;
-            case 'psychic': return <GiBrain />;
-            case 'radiant': return <GiSunbeams />;
-            case 'slashing': return <GiQuickSlash />;
-            case 'thunder': return <GiSpeaker />;
-            default: return null;            
-        }
-    }
-
     useEffect(() => {
         const fetchSpellDamage = async () => {
             if (spell?.dmgAtCharLvl) {
@@ -407,7 +374,6 @@ const Spellbook: React.FC = () => {
             if(spell?.hasTable){
                 try {
                     const data = await fetchSpellTable(spell.index);
-                    console.log(data);
                     setSpellTableData(data || null);
                 } catch (error) {
                     console.error('Error fetching spell table data:', error);
