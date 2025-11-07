@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSettings } from "../../../context/SettingsContext";
 import "./spellbook.css";
-import { fetchDmgCharLvl, fetchSpellAdditionalDesc, fetchSpellAtSlot, fetchSpellByIndex, fetchSpellTable } from "../../../utils/dbFuncs";
+import { fetchDmgCharLvl, fetchSpellAdditionalDesc, fetchSpellAtSlot, fetchSpellByIndex } from "../../../utils/dbFuncs";
 import { getAlwaysPreparedSpells, getAlwaysRememberedSpells, toggleAlwaysRememberedSpell, isSpellAlwaysRemembered, mapAoETypeIcons, mapDamageTypeIcons } from "../../../utils/functions";
 import supabase from "../../../utils/supabase";
 import Spelllist from "../../partials/spelllist/Spelllist";
+import SpellTable from "../../partials/spelltable/SpellTable";
 import type { Spell } from "../../../utils/types/types";
 import { groupAndSortSpells } from "../../../utils/functions";
 
@@ -27,7 +28,6 @@ const Spellbook: React.FC = () => {
     const [showKnownSpells, setShowKnownSpells] = useState(false);
     const [spellDamage, setSpellDamage] = useState<string | null>(null);
     const [spellAdditionalDesc, setSpellAdditionalDesc] = useState<string[] | null>(null);
-    const [spellTableData, setSpellTableData] = useState<JSON | null>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
     const usesKnownSpells = () => {
@@ -336,15 +336,16 @@ const Spellbook: React.FC = () => {
             }  else if(spell?.dmgAtHigherSlot){
                 try {
                     const data = await fetchSpellAtSlot(spell.index, 'dmg');
-                    setSpellDamage('1: ' + data?.['1'] + 
-                        ', 2: ' + data?.['2'] + 
-                        ', 3: ' + data?.['3'] + 
-                        ', 4: ' + data?.['4'] + 
-                        ', 5: ' + data?.['5'] + 
-                        ', 6: ' + data?.['6'] + 
-                        ', 7: ' + data?.['7'] + 
-                        ', 8: ' + data?.['8'] + 
-                        ', 9: ' + data?.['9'] || null);
+                    const minLevel = spell.level;
+                    const damageEntries = [];
+                    
+                    for (let level = minLevel; level <= 9; level++) {
+                        if (data?.[level]) {
+                            damageEntries.push(`${level}: ${data[level]}`);
+                        }
+                    }
+                    
+                    setSpellDamage(damageEntries.length > 0 ? damageEntries.join(', ') : null);
                 } catch (error) {
                     console.error('Error fetching spell damage:', error);
                     setSpellDamage(null);
@@ -356,7 +357,7 @@ const Spellbook: React.FC = () => {
         };
 
         fetchSpellDamage();
-    }, [spell]);
+    }, [spell, character.level]);
 
     useEffect(() => {
         const fetchSpellAdditionalInfo = async () => {
@@ -370,17 +371,6 @@ const Spellbook: React.FC = () => {
                 }
             } else {
                 setSpellAdditionalDesc(null);
-            }
-            if(spell?.hasTable){
-                try {
-                    const data = await fetchSpellTable(spell.index);
-                    setSpellTableData(data || null);
-                } catch (error) {
-                    console.error('Error fetching spell table data:', error);
-                    setSpellTableData(null);
-                }
-            } else {
-                setSpellTableData(null);
             }
         }
 
@@ -429,7 +419,6 @@ const Spellbook: React.FC = () => {
                 )}
             </div>}
             
-            {/* Always Prepared Spells Section */}
             {character.class.spellcastingAbility && <div style={{ marginBottom: 16 }}>
                 <button
                     type="button"
@@ -503,7 +492,6 @@ const Spellbook: React.FC = () => {
                 )}
             </div>}
             
-            {/* Known Spells Section - Only for Wizard, Cleric, Druid */}
             {usesKnownSpells() && (
                 <div style={{ marginBottom: 16 }}>
                     <button
@@ -658,45 +646,10 @@ const Spellbook: React.FC = () => {
                     {spell.additionalDesc && <div>{spellAdditionalDesc}</div>//TODO: hier noch listen und fett formatieren
                     }
                     {spell.atHigherLevel && <p>At Higher Levels: {spell.atHigherLevel}</p>}
-                    {spell.hasTable && spellTableData && (
-                        <div style={{ margin: '16px 0' }}>
-                            <table style={{ 
-                                borderCollapse: 'collapse', 
-                                width: '100%',
-                                border: '1px solid #ccc'
-                            }}>
-                                <thead>
-                                    <tr>
-                                        {Object.keys(spellTableData as any).map(header => (
-                                            <th key={header} style={{ 
-                                                border: '1px solid #ccc',
-                                                padding: '8px',
-                                                backgroundColor: '#f5f5f5',
-                                                textAlign: 'left',
-                                                textTransform: 'capitalize'
-                                            }}>
-                                                {header}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {Array.from({ length: Math.max(...Object.values(spellTableData as any).map((arr: any) => arr?.length || 0)) }).map((_, rowIndex) => (
-                                        <tr key={rowIndex}>
-                                            {Object.values(spellTableData as any).map((column: any, colIndex) => (
-                                                <td key={colIndex} style={{ 
-                                                    border: '1px solid #ccc',
-                                                    padding: '8px'
-                                                }}>
-                                                    {column?.[rowIndex] || ''}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    <SpellTable 
+                        spellIndex={spell.index}
+                        hasTable={spell.hasTable}
+                    />
                 </div>
             )}
         </div>

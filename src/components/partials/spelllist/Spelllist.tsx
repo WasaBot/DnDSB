@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Spell } from "../../../utils/types/types";
-import { mapDamageTypeIcons } from "../../../utils/functions";
+import SpellItem from "../spellitem/SpellItem";
 
 interface SpelllistProps {
   spellarray: Spell[];
@@ -27,7 +27,6 @@ const Spelllist: React.FC<SpelllistProps> = ({
     onDeleteSpell,
     usesKnownSpells = false,
 }) => {
-    const [openSpell, setOpenSpell] = useState<string | null>(null);
     const [openLevel, setOpenLevel] = useState<boolean>(false);
 
     return (
@@ -58,133 +57,15 @@ const Spelllist: React.FC<SpelllistProps> = ({
             {openLevel && (
                 <ul className="charactersheet-spell-list">
                     {spellarray.map((spell: Spell & { Prepared?: boolean }) => (
-                        <li
+                        <SpellItem
                             key={spell.name}
-                            className="charactersheet-spell-listitem"
-                        >
-                            <div
-                                className="charactersheet-spell-row"
-                                onClick={() =>
-                                    setOpenSpell(
-                                        openSpell === spell.name
-                                            ? null
-                                            : spell.name
-                                    )
-                                }
-                            >
-                                <span>
-                                    <b>{spell.name}</b> | {spell.castingTime} |{" "}
-                                    {spell.range} | {spell.components} |{" "}
-                                    {spell.duration} | {spell.attackType ?? spell.spellSaveDcType} | {mapDamageTypeIcons(spell.damageType) ?? spell.healAtHigherSlot ? spell.damageType : ""}
-                                </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {onMoveToPrepared && usesKnownSpells && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onMoveToPrepared(spell.index, spell.name);
-                                            }}
-                                            style={{
-                                                background: '#e8f5e8',
-                                                border: '1px solid #c8e6c9',
-                                                borderRadius: '4px',
-                                                color: '#2e7d32',
-                                                padding: '2px 6px',
-                                                fontSize: '12px',
-                                                cursor: 'pointer'
-                                            }}
-                                            title="Move to always prepared"
-                                        >
-                                            → Prepare
-                                        </button>
-                                    )}
-                                    {onMoveToKnown && usesKnownSpells && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onMoveToKnown(spell.index, spell.name);
-                                            }}
-                                            style={{
-                                                background: '#fff3e0',
-                                                border: '1px solid #ffcc02',
-                                                borderRadius: '4px',
-                                                color: '#f57c00',
-                                                padding: '2px 6px',
-                                                fontSize: '12px',
-                                                cursor: 'pointer'
-                                            }}
-                                            title="Move back to known spells"
-                                        >
-                                            ← To Known
-                                        </button>
-                                    )}
-                                    {onDeleteSpell && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onDeleteSpell(spell.index, spell.name);
-                                            }}
-                                            style={{
-                                                background: '#ffebee',
-                                                border: '1px solid #e57373',
-                                                borderRadius: '4px',
-                                                color: '#c62828',
-                                                padding: '2px 6px',
-                                                fontSize: '12px',
-                                                cursor: 'pointer'
-                                            }}
-                                            title="Delete spell completely"
-                                        >
-                                            🗑️ Delete
-                                        </button>
-                                    )}
-                                    {onRemoveSpell && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onRemoveSpell(spell.index, spell.name);
-                                            }}
-                                            style={{
-                                                background: '#ffebee',
-                                                border: '1px solid #e57373',
-                                                borderRadius: '4px',
-                                                color: '#c62828',
-                                                padding: '2px 6px',
-                                                fontSize: '12px',
-                                                cursor: 'pointer'
-                                            }}
-                                            title="Remove spell"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                    <span>
-                                        {openSpell === spell.name ? "▲" : "▼"}
-                                    </span>
-                                </div>
-                            </div>
-                            {openSpell === spell.name && (
-                                <div className="charactersheet-spell-details">
-                                    <i>{spell.desc}</i>
-                                    {spell.Prepared && (
-                                        <div
-                                            style={{
-                                                marginTop: "8px",
-                                                padding: "4px 8px",
-                                                borderRadius: "4px",
-                                                fontSize: "12px",
-                                            }}
-                                        >
-                                            ✓ Always Prepared
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </li>
+                            spell={spell}
+                            onRemoveSpell={onRemoveSpell}
+                            onMoveToPrepared={onMoveToPrepared}
+                            onMoveToKnown={onMoveToKnown}
+                            onDeleteSpell={onDeleteSpell}
+                            usesKnownSpells={usesKnownSpells}
+                        />
                     ))}
                 </ul>
             )}
