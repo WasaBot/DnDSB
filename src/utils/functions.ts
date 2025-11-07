@@ -9,17 +9,19 @@ import {
     GiBrain,
     GiCube,
     GiDeathSkull,
-    GiFire,
     GiHammerDrop,
+    GiHealthNormal,
     GiLightningBranches,
     GiNuclear,
     GiPoisonBottle,
     GiQuickSlash,
-    GiSpeaker,
+    GiSoundWaves,
     GiSunbeams,
-    GiTensionSnowflake,
     GiWindHole,
 } from "react-icons/gi";
+import {FaRegSnowflake,
+    FaFire 
+} from "react-icons/fa";
 import { PiCylinder } from "react-icons/pi";
 import React from "react";
 
@@ -264,31 +266,33 @@ export function mapAoETypeIcons(
 export function mapDamageTypeIcons(type: string | undefined): React.ReactElement | null {
     switch (type?.toLowerCase()) {
         case "acid":
-            return React.createElement(GiNuclear);
+            return React.createElement(GiNuclear, { style: { color: '#38ff3eff' } });
         case "bludgeoning":
-            return React.createElement(GiHammerDrop);
+            return React.createElement(GiHammerDrop, { style: { color: '#61463cff' } });
         case "cold":
-            return React.createElement(GiTensionSnowflake);
+            return React.createElement(FaRegSnowflake, { style: { color: '#90caf9' } });
         case "fire":
-            return React.createElement(GiFire);
+            return React.createElement(FaFire , { style: { color: '#ec2c2cff' } });
         case "force":
-            return React.createElement(GiWindHole);
+            return React.createElement(GiWindHole, { style: { color: '#e07777ff' } });
         case "lightning":
-            return React.createElement(GiLightningBranches);
+            return React.createElement(GiLightningBranches, { style: { color: '#d1af3dff' } });
         case "necrotic":
-            return React.createElement(GiDeathSkull);
+            return React.createElement(GiDeathSkull, { style: { color: '#0d6412ff' } });
         case "piercing":
-            return React.createElement(GiArrowhead);
+            return React.createElement(GiArrowhead,{ style: { color: '#61463cff' } });
         case "poison":
-            return React.createElement(GiPoisonBottle);
+            return React.createElement(GiPoisonBottle, { style: { color: '#4caf50' } });
         case "psychic":
-            return React.createElement(GiBrain);
+            return React.createElement(GiBrain, { style: { color: '#d35acdff' } });
         case "radiant":
-            return React.createElement(GiSunbeams);
+            return React.createElement(GiSunbeams, { style: { color: '#d1af3dff' } });
         case "slashing":
-            return React.createElement(GiQuickSlash);
+            return React.createElement(GiQuickSlash, { style: { color: '#61463cff' } });
         case "thunder":
-            return React.createElement(GiSpeaker);
+            return React.createElement(GiSoundWaves, { style: { color: '#8e23c0ff' } });
+        case "healing":
+            return React.createElement(GiHealthNormal, { style: { color: '#4caf50' } });
         default:
             return null;
     }
