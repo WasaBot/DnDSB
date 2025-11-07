@@ -180,10 +180,12 @@ const Spellarea: React.FC = () => {
                     <div className="charactersheet-spell-section">
                         <h4>Available Spells</h4>
                         {allSpellLevels.map(
-                            ({ level, spells }) =>
-                                (level == 0 ||
-                                    (spellSlots?.[level - 1] !== undefined &&
-                                        spellSlots[level - 1] > 0)) && (
+                            ({ level, spells }) => {
+                                const shouldShow = level == 0 ||
+                                    (spellSlots?.[level - 1] !== undefined && spellSlots[level - 1] > 0) ||
+                                    (character.class.name === "Warlock" && spellSlots && level <= Math.max(...spellSlots.map((slots, index) => slots > 0 ? index + 1 : 0)));
+                                
+                                return shouldShow ? (
                                     <div key={level}>
                                         <Spelllist
                                             level={level}
@@ -195,7 +197,8 @@ const Spellarea: React.FC = () => {
                                             spellSlots={spellSlots}
                                         />
                                     </div>
-                                )
+                                ) : null;
+                            }
                         )}
                     </div>
                 </div>
