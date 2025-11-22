@@ -27,6 +27,15 @@ const Settings: React.FC = () => {
         []
     );
     const [subclassLevelReq, setSubclassLevelReq] = useState<number>(3);
+    const [isInitialized, setIsInitialized] = useState<boolean>(false);
+    
+    // Land type for Circle of the Land druids
+    const landTypes = ['arctic', 'coast', 'desert', 'forest', 'grassland', 'mountain', 'swamp', 'underdark'];
+
+    // Character saving state
+    const [savedCharacters, setSavedCharacters] = useState<{[key: string]: any}>({});
+    const [saveMessage, setSaveMessage] = useState<string>("");
+    const [showSavedCharacters, setShowSavedCharacters] = useState<boolean>(false);
 
     // Switch handler
     const handleUnitChange = () => {
@@ -77,35 +86,58 @@ const Settings: React.FC = () => {
                 const subclassLevel = (data as any).subclass_from_lvl || null;
 
                 setSubclassLevelReq(subclassLevel);
-                setCharacter((prev) => ({
-                    ...prev,
-                    class: {
-                        name: value,
-                        spellcastingAbility,
-                        subclass: undefined,
-                    },
-                }));
-
+                
+                // First, get the available subclasses for this class
                 const { data: subclassData, error: subclassError } =
                     await supabase
                         .from("subclasses")
                         .select(
                             "index,subclass,spellcasting_attribute_id,attributes (id,name)"
                         )
-                        .eq("base_class", value.toLowerCase());
+                        .eq("base_class", value);
 
-                if (!subclassError && subclassData) {
-                    const subClassData = subclassData.map((sub: any) => ({
+                if (subclassError) {
+                    console.error("Error loading subclasses:", subclassError);
+                    setAvailableSubclasses([]);
+                    setCharacter((prev) => ({
+                        ...prev,
+                        class: {
+                            name: value,
+                            spellcastingAbility,
+                            subclass: undefined,
+                        },
+                    }));
+                } else if (subclassData) {
+                    const formattedSubclasses = subclassData.map((sub: any) => ({
                         id: sub.index,
                         name: sub.subclass,
-                        spellcastingAbility:
-                            sub.attributes !== null
-                                ? sub.attributes.name
-                                : null,
+                        spellcastingAbility: sub.attributes?.name || null,
                     }));
-                    setAvailableSubclasses(subClassData);
+                    setAvailableSubclasses(formattedSubclasses);
+                    
+                    // Check if current subclass is still valid for the new class
+                    const currentSubclass = character.class.subclass;
+                    const isSubclassStillValid = currentSubclass && 
+                        formattedSubclasses.some(sub => sub.id === currentSubclass.id);
+                    
+                    setCharacter((prev) => ({
+                        ...prev,
+                        class: {
+                            name: value,
+                            spellcastingAbility,
+                            subclass: isSubclassStillValid ? currentSubclass : undefined,
+                        },
+                    }));
                 } else {
                     setAvailableSubclasses([]);
+                    setCharacter((prev) => ({
+                        ...prev,
+                        class: {
+                            name: value,
+                            spellcastingAbility,
+                            subclass: undefined,
+                        },
+                    }));
                 }
             }
         } catch (err) {
@@ -167,15 +199,30 @@ const Settings: React.FC = () => {
                                     : null,
                         }));
                         setAvailableSubclasses(subClassData);
+                        setIsInitialized(true); // Mark as initialized after subclasses are loaded
+                    } else {
+                        setAvailableSubclasses([]);
+                        setIsInitialized(true);
                     }
+                } else {
+                    setAvailableSubclasses([]);
+                    setIsInitialized(true);
                 }
             } catch (err) {
                 console.error("Error loading subclasses:", err);
+                setAvailableSubclasses([]);
+                setIsInitialized(true);
             }
         };
 
         loadSubclasses();
     }, [character.class.name]);
+
+    // Load saved characters on mount
+    useEffect(() => {
+        const savedChars = getSavedCharacters();
+        setSavedCharacters(savedChars);
+    }, []); // Ensure this effect runs when class name changes
 
     // Effect to clear subclass if level becomes too low
     useEffect(() => {
@@ -219,6 +266,90 @@ const Settings: React.FC = () => {
                         ?.spellcastingAbility || prev.class.spellcastingAbility,
             },
         }));
+    };
+
+    const handleLandTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = e.target.value || undefined;
+        setCharacter((prev) => ({
+            ...prev,
+            class: {
+                ...prev.class,
+                subclass: prev.class.subclass ? {
+                    ...prev.class.subclass,
+                    landType: value,
+                } : prev.class.subclass,
+            },
+        }));
+    };
+
+    // Character saving/loading functions
+    const getSavedCharacters = () => {
+        try {
+            const saved = localStorage.getItem('dndsb_saved_characters');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    };
+
+    const handleSaveCharacter = () => {
+        try {
+            // Generate a unique key based on character data
+            const characterKey = `character_${Date.now()}_${character.name.replace(/\s+/g, '_')}`;
+            
+            // Get all current saved characters
+            const allSavedCharacters = getSavedCharacters();
+            
+            // Add the current character
+            allSavedCharacters[characterKey] = {
+                ...character,
+                savedAt: new Date().toISOString()
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('dndsb_saved_characters', JSON.stringify(allSavedCharacters));
+            setSavedCharacters(allSavedCharacters);
+            setSaveMessage(`Character "${character.name}" saved successfully!`);
+            
+            // Clear the message after 3 seconds
+            setTimeout(() => setSaveMessage(""), 3000);
+        } catch (error) {
+            console.error('Error saving character:', error);
+            setSaveMessage('Error saving character');
+            setTimeout(() => setSaveMessage(""), 3000);
+        }
+    };
+
+    const handleLoadCharacter = (characterKey: string) => {
+        try {
+            const allSavedCharacters = getSavedCharacters();
+            const characterToLoad = allSavedCharacters[characterKey];
+            if (characterToLoad) {
+                setCharacter(characterToLoad);
+                setSaveMessage(`Character "${characterToLoad.name}" loaded successfully!`);
+                setTimeout(() => setSaveMessage(""), 3000);
+            }
+        } catch (error) {
+            console.error('Error loading character:', error);
+            setSaveMessage('Error loading character');
+            setTimeout(() => setSaveMessage(""), 3000);
+        }
+    };
+
+    const handleDeleteCharacter = (characterKey: string) => {
+        try {
+            const allSavedCharacters = getSavedCharacters();
+            const characterName = allSavedCharacters[characterKey]?.name || 'Unknown';
+            delete allSavedCharacters[characterKey];
+            localStorage.setItem('dndsb_saved_characters', JSON.stringify(allSavedCharacters));
+            setSavedCharacters(allSavedCharacters);
+            setSaveMessage(`Character "${characterName}" deleted successfully!`);
+            setTimeout(() => setSaveMessage(""), 3000);
+        } catch (error) {
+            console.error('Error deleting character:', error);
+            setSaveMessage('Error deleting character');
+            setTimeout(() => setSaveMessage(""), 3000);
+        }
     };
 
     // --- Save/Load Feature ---
@@ -376,6 +507,23 @@ const Settings: React.FC = () => {
                         </select>
                     </label>
                 )}
+                {character.class.name === 'Druid' && character.class.subclass?.id === 'land' && (
+                    <label>
+                        Land Type:
+                        <select
+                            name="landType"
+                            value={character.class.subclass.landType ?? ""}
+                            onChange={handleLandTypeChange}
+                        >
+                            <option value="">Select Land Type</option>
+                            {landTypes.map((land) => (
+                                <option key={land} value={land}>
+                                    {land.charAt(0).toUpperCase() + land.slice(1)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
                 <label>
                     Level:
                     <input
@@ -454,6 +602,125 @@ const Settings: React.FC = () => {
                     />
                 </label>
             </form>
+            
+            {/* Character Saving */}
+            <div style={{ margin: '20px 0' }}>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <button 
+                        type="button" 
+                        onClick={handleSaveCharacter}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        💾 Save Character
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={() => setShowSavedCharacters(!showSavedCharacters)}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#2196F3',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        📂 {showSavedCharacters ? 'Hide' : 'Show'} Saved Characters
+                    </button>
+                </div>
+                
+                {saveMessage && (
+                    <div style={{
+                        padding: '8px',
+                        backgroundColor: saveMessage.includes('Error') ? '#ffebee' : '#e8f5e8',
+                        color: saveMessage.includes('Error') ? '#d32f2f' : '#2e7d32',
+                        borderRadius: '4px',
+                        marginBottom: '10px'
+                    }}>
+                        {saveMessage}
+                    </div>
+                )}
+                
+                {showSavedCharacters && (
+                    <div style={{ 
+                        border: '1px solid #ddd', 
+                        borderRadius: '4px', 
+                        padding: '10px',
+                        backgroundColor: '#f9f9f9'
+                    }}>
+                        <h4 style={{ margin: '0 0 10px 0' }}>Saved Characters</h4>
+                        {Object.keys(savedCharacters).length === 0 ? (
+                            <p style={{ margin: 0, fontStyle: 'italic', color: '#666' }}>
+                                No saved characters yet.
+                            </p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {Object.entries(savedCharacters).map(([key, char]) => (
+                                    <div 
+                                        key={key} 
+                                        style={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center',
+                                            padding: '8px',
+                                            backgroundColor: 'white',
+                                            borderRadius: '4px',
+                                            border: '1px solid #e0e0e0'
+                                        }}
+                                    >
+                                        <div>
+                                            <strong>{char.name}</strong> - {char.class.name} {char.level}
+                                            {char.class.subclass && ` (${char.class.subclass.name})`}
+                                            <br />
+                                            <small style={{ color: '#666' }}>
+                                                Saved: {new Date(char.savedAt).toLocaleString()}
+                                            </small>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <button 
+                                                onClick={() => handleLoadCharacter(key)}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    backgroundColor: '#2196F3',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                Load
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteCharacter(key)}
+                                                style={{
+                                                    padding: '4px 8px',
+                                                    backgroundColor: '#f44336',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '3px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* Save/Load Feature */}
             <div style={{ marginTop: 24 }}>
                 <h4>Save/Load Character</h4>
@@ -533,8 +800,6 @@ const Settings: React.FC = () => {
                                             style={{ 
                                                 padding: '4px 8px', 
                                                 fontSize: '12px',
-                                                backgroundColor: '#2196F3',
-                                                color: 'white',
                                                 border: 'none',
                                                 borderRadius: '2px',
                                                 cursor: 'pointer'

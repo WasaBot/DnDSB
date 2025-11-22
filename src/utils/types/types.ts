@@ -35,6 +35,7 @@ export interface Subclass {
     id: string;
     name: string;
     spellcastingAbility?: AttributeName;
+    landType?: string; // For Circle of the Land druids
 }
 
 interface Attributes {

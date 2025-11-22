@@ -1,6 +1,5 @@
 import type { Spell, Character } from "./types/types";
 import {
-    fetchClassPreparedSpells,
     fetchSubclassPreparedSpells,
 } from "./dbFuncs";
 import { TbCone2, TbSphere } from "react-icons/tb";
@@ -164,22 +163,18 @@ export async function getAlwaysPreparedSpells(
 ): Promise<string[]> {
     const alwaysPreppedSpells: string[] = [];
 
-    // Class-based always prepared spells from database
-    const classIndex = character.class.name.toLowerCase().replace(/\s+/g, "-");
-    const classSpells = await fetchClassPreparedSpells(
-        classIndex,
-        character.level
-    );
-    alwaysPreppedSpells.push(...classSpells);
-
     // Subclass-based always prepared spells from database
     if (character.class.subclass) {
         const subclassIndex = character.class.subclass.name
             .toLowerCase()
             .replace(/\s+/g, "-");
+        
+        // Pass landType for Circle of the Land druids
+        const landType = character.class.subclass.landType;
         const subclassSpells = await fetchSubclassPreparedSpells(
             subclassIndex,
-            character.level
+            character.level,
+            landType
         );
         alwaysPreppedSpells.push(...subclassSpells);
     }

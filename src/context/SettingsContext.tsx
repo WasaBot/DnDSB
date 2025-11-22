@@ -5,7 +5,15 @@ import { generateCharacterId } from "../utils/functions";
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [unit, setUnit] = useState<UnitType>("ft");
+  const [unit, setUnit] = useState<UnitType>(() => {
+    try {
+      const saved = localStorage.getItem('dndsb_unit');
+      return saved ? JSON.parse(saved) : "ft";
+    } catch {
+      return "ft";
+    }
+  });
+  
   const [character, setCharacter] = useState<Character>({
     id: generateCharacterId("John", "Fighter"),
     name: "John",
@@ -23,16 +31,33 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     level: 1,
   });
 
-  // Auto-generate character ID when name or class changes
+  // Save unit to localStorage when it changes
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('dndsb_unit', JSON.stringify(unit));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [unit]);
+
+
+
+  // Auto-generate character ID when name or class changes (but avoid infinite loops)
   React.useEffect(() => {
     const newId = generateCharacterId(character.name, character.class.name, character.class.subclass?.id);
     if (character.id !== newId) {
-      setCharacter(prev => ({
-        ...prev,
-        id: newId
-      }));
+      setCharacter(prev => {
+        // Only update if the ID actually needs to change to avoid loops
+        if (prev.id !== newId) {
+          return {
+            ...prev,
+            id: newId
+          };
+        }
+        return prev;
+      });
     }
-  }, [character.name, character.class.name, character.class.subclass, character.id]);
+  }, [character.name, character.class.name, character.class.subclass?.id, character.id]);
 
   React.useEffect(() => {
       const params = new URLSearchParams(window.location.search);

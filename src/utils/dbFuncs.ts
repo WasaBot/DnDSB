@@ -56,39 +56,41 @@ export async function fetchSpellsByIndices(spellIndices: string[]): Promise<Reco
 }
 
 /**
- * Fetch class-based always prepared spells for a character
- */
-export async function fetchClassPreparedSpells(classIndex: string, characterLevel: number): Promise<string[]> {
-    const { data, error } = await supabase
-        .from('class_prepared_spells')
-        .select('spell_index')
-        .eq('class_index', classIndex)
-        .lte('level_required', characterLevel);
-        
-    if (error) {
-        console.error('Error fetching class prepared spells:', error.message);
-        return [];
-    }
-    
-    return data?.map(row => row.spell_index) || [];
-}
-
-/**
  * Fetch subclass-based always prepared spells for a character
  */
-export async function fetchSubclassPreparedSpells(subclassIndex: string, characterLevel: number): Promise<string[]> {
-    const { data, error } = await supabase
+export async function fetchSubclassPreparedSpells(subclassIndex: string, characterLevel: number, landType?: string): Promise<string[]> {
+    let query = supabase
         .from('subclass_prepared_spells')
-        .select('spell_index')
+        .select('spell_index, subclass_special')
         .eq('subclass_index', subclassIndex)
         .lte('level_required', characterLevel);
+        
+    const { data, error } = await query;
         
     if (error) {
         console.error('Error fetching subclass prepared spells:', error.message);
         return [];
     }
     
-    return data?.map(row => row.spell_index) || [];
+    if (!data) return [];
+    
+    // Filter results based on land type for Circle of the Land druids
+    const filteredData = data.filter(row => {
+        // If no subclass_special, include it (applies to all land types)
+        if (!row.subclass_special) {
+            return true;
+        }
+        
+        // If landType is provided and subclass_special contains land types, check if it matches
+        if (landType && Array.isArray(row.subclass_special)) {
+            return row.subclass_special.includes(landType);
+        }
+        
+        // If no landType provided but subclass_special exists, exclude it (land-specific spells)
+        return false;
+    });
+    
+    return filteredData.map(row => row.spell_index);
 }
 export async function fetchDmgCharLvl(spellIndex: string): Promise<any | null> {
     const { data, error } = await supabase
