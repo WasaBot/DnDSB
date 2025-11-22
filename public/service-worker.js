@@ -3,7 +3,8 @@ const SUPABASE_CACHE = 'supabase-api-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/service-worker.js'
 ];
 
 // Cache strategies for different types of data
@@ -23,9 +24,23 @@ const CACHE_DURATION = {
 };
 
 self.addEventListener('install', event => {
+  console.log('Service Worker installing with cache version:', CACHE_NAME);
   event.waitUntil(
     Promise.all([
-      caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)),
+      caches.open(CACHE_NAME).then(cache => {
+        console.log('Caching static assets:', STATIC_ASSETS);
+        return cache.addAll(STATIC_ASSETS).catch(error => {
+          console.error('Failed to cache static assets:', error);
+          // Try to cache them individually to identify the problematic one
+          return Promise.allSettled(
+            STATIC_ASSETS.map(asset => 
+              cache.add(asset).catch(err => 
+                console.error(`Failed to cache ${asset}:`, err)
+              )
+            )
+          );
+        });
+      }),
       caches.open(SUPABASE_CACHE)
     ])
   );
@@ -34,12 +49,17 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(key => ![CACHE_NAME, SUPABASE_CACHE].includes(key))
-          .map(key => caches.delete(key))
-      )
-    )
+    caches.keys().then(keys => {
+      const validCaches = [CACHE_NAME, SUPABASE_CACHE];
+      return Promise.all(
+        keys
+          .filter(key => !validCaches.includes(key))
+          .map(key => {
+            console.log('Deleting old cache:', key);
+            return caches.delete(key);
+          })
+      );
+    })
   );
   self.clients.claim();
 });
@@ -158,8 +178,32 @@ self.addEventListener('fetch', event => {
   
   // Handle static assets
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(event.request).then(response => {
+        if (response) {
+          return response;
+        }
+        // If not in cache, fetch from network and cache it
+        return fetch(event.request).then(networkResponse => {
+          // Only cache successful responses for static assets
+          if (networkResponse.ok && STATIC_ASSETS.some(asset => 
+            event.request.url.endsWith(asset) || 
+            (asset === '/' && event.request.url === self.location.origin + '/')
+          )) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        }).catch(error => {
+          console.error('Failed to fetch static asset:', event.request.url, error);
+          // Return a basic offline response for navigation requests
+          if (event.request.mode === 'navigate') {
+            return new Response('<!DOCTYPE html><html><body><h1>Offline</h1><p>This app works offline, but this page is not cached.</p></body></html>', {
+              headers: { 'Content-Type': 'text/html' }
+            });
+          }
+          throw error;
+        });
+      });
     })
   );
 });

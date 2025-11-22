@@ -37,10 +37,11 @@ export function register(config?: Config) {
 }
 
 function registerValidSW(swUrl: string, config?: Config) {
+  console.log('Registering service worker from:', swUrl);
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      console.log('Service Worker registered with Supabase caching');
+      console.log('Service Worker registered successfully with scope:', registration.scope);
       
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
@@ -48,6 +49,7 @@ function registerValidSW(swUrl: string, config?: Config) {
           return;
         }
         installingWorker.onstatechange = () => {
+          console.log('Service Worker state changed to:', installingWorker.state);
           if (installingWorker.state === 'installed') {
             if (navigator.serviceWorker.controller) {
               console.log(
@@ -69,6 +71,7 @@ function registerValidSW(swUrl: string, config?: Config) {
     })
     .catch((error) => {
       console.error('Error during service worker registration:', error);
+      console.log('Service worker URL attempted:', swUrl);
     });
 }
 

@@ -27,7 +27,6 @@ const Settings: React.FC = () => {
         []
     );
     const [subclassLevelReq, setSubclassLevelReq] = useState<number>(3);
-    const [isInitialized, setIsInitialized] = useState<boolean>(false);
     
     // Land type for Circle of the Land druids
     const landTypes = ['arctic', 'coast', 'desert', 'forest', 'grassland', 'mountain', 'swamp', 'underdark'];
@@ -199,19 +198,15 @@ const Settings: React.FC = () => {
                                     : null,
                         }));
                         setAvailableSubclasses(subClassData);
-                        setIsInitialized(true); // Mark as initialized after subclasses are loaded
                     } else {
                         setAvailableSubclasses([]);
-                        setIsInitialized(true);
                     }
                 } else {
                     setAvailableSubclasses([]);
-                    setIsInitialized(true);
                 }
             } catch (err) {
                 console.error("Error loading subclasses:", err);
                 setAvailableSubclasses([]);
-                setIsInitialized(true);
             }
         };
 
