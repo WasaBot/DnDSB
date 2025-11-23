@@ -369,6 +369,7 @@ const SpellItem: React.FC<SpellItemProps> = ({
                             {renderAdditionalDescriptions(additionalDesc)}
                         </div>
                     )}
+                    {spell.dcDesc ?? ""}
                     <SpellTable 
                         spellIndex={spell.index}
                         hasTable={spell.hasTable}
