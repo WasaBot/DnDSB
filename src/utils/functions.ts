@@ -163,13 +163,11 @@ export async function getAlwaysPreparedSpells(
 ): Promise<string[]> {
     const alwaysPreppedSpells: string[] = [];
 
-    // Subclass-based always prepared spells from database
     if (character.class.subclass) {
         const subclassIndex = character.class.subclass.name
             .toLowerCase()
             .replace(/\s+/g, "-");
         
-        // Pass landType for Circle of the Land druids
         const landType = character.class.subclass.landType;
         const subclassSpells = await fetchSubclassPreparedSpells(
             subclassIndex,
@@ -179,18 +177,13 @@ export async function getAlwaysPreparedSpells(
         alwaysPreppedSpells.push(...subclassSpells);
     }
 
-    // Character-specific always prepared spells
     if (character.alwaysPreparedSpells) {
         alwaysPreppedSpells.push(...character.alwaysPreparedSpells);
     }
 
-    // Remove duplicates
     return Array.from(new Set(alwaysPreppedSpells));
 }
 
-/**
- * Toggle always remembered status for a spell for a character
- */
 export function toggleAlwaysRememberedSpell(
     characterId: string,
     spellIndex: string
@@ -214,9 +207,6 @@ export function toggleAlwaysRememberedSpell(
     }
 }
 
-/**
- * Get always remembered spells for a character
- */
 export function getAlwaysRememberedSpells(characterId: string): string[] {
     try {
         const key = `alwaysRemembered_${characterId}`;

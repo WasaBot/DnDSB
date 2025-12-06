@@ -105,42 +105,6 @@ export type Database = {
           },
         ]
       }
-      class_prepared_spells: {
-        Row: {
-          class_index: string
-          id: number
-          level_required: number
-          spell_index: string
-        }
-        Insert: {
-          class_index: string
-          id?: number
-          level_required: number
-          spell_index: string
-        }
-        Update: {
-          class_index?: string
-          id?: number
-          level_required?: number
-          spell_index?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "class_prepared_spells_class_index_fkey"
-            columns: ["class_index"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["class_index"]
-          },
-          {
-            foreignKeyName: "class_prepared_spells_spell_index_fkey"
-            columns: ["spell_index"]
-            isOneToOne: false
-            referencedRelation: "spells"
-            referencedColumns: ["index"]
-          },
-        ]
-      }
       class_resources: {
         Row: {
           class_index: string
@@ -148,6 +112,7 @@ export type Database = {
           lvl: number
           resets_on: Database["public"]["Enums"]["resets_on"]
           resource_index: string
+          resource_table_id: number | null
           subclass_index: string | null
           type: Database["public"]["Enums"]["resource_types"]
         }
@@ -157,6 +122,7 @@ export type Database = {
           lvl: number
           resets_on: Database["public"]["Enums"]["resets_on"]
           resource_index: string
+          resource_table_id?: number | null
           subclass_index?: string | null
           type: Database["public"]["Enums"]["resource_types"]
         }
@@ -166,6 +132,7 @@ export type Database = {
           lvl?: number
           resets_on?: Database["public"]["Enums"]["resets_on"]
           resource_index?: string
+          resource_table_id?: number | null
           subclass_index?: string | null
           type?: Database["public"]["Enums"]["resource_types"]
         }
@@ -183,6 +150,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "resources"
             referencedColumns: ["index"]
+          },
+          {
+            foreignKeyName: "class_resources_resource_table_id_fkey"
+            columns: ["resource_table_id"]
+            isOneToOne: false
+            referencedRelation: "resource_table"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "class_resources_subclass_index_fkey"
@@ -235,6 +209,32 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "attributes"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_table: {
+        Row: {
+          id: number
+          resource_index: string
+          uses: number[]
+        }
+        Insert: {
+          id?: number
+          resource_index: string
+          uses: number[]
+        }
+        Update: {
+          id?: number
+          resource_index?: string
+          uses?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_table_resource_index_fkey"
+            columns: ["resource_index"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["index"]
           },
         ]
       }
@@ -604,18 +604,21 @@ export type Database = {
           level_required: number
           spell_index: string
           subclass_index: string
+          subclass_special: string[] | null
         }
         Insert: {
           id?: number
           level_required: number
           spell_index: string
           subclass_index: string
+          subclass_special?: string[] | null
         }
         Update: {
           id?: number
           level_required?: number
           spell_index?: string
           subclass_index?: string
+          subclass_special?: string[] | null
         }
         Relationships: [
           {
@@ -641,6 +644,7 @@ export type Database = {
           index: string
           spellcasting_attribute_id: number | null
           subclass: string
+          subclass_special: string[] | null
         }
         Insert: {
           base_class: string
@@ -648,6 +652,7 @@ export type Database = {
           index: string
           spellcasting_attribute_id?: number | null
           subclass: string
+          subclass_special?: string[] | null
         }
         Update: {
           base_class?: string
@@ -655,6 +660,7 @@ export type Database = {
           index?: string
           spellcasting_attribute_id?: number | null
           subclass?: string
+          subclass_special?: string[] | null
         }
         Relationships: [
           {
@@ -685,7 +691,14 @@ export type Database = {
       "caster-types": "full-caster" | "half-caster" | "subclass" | "warlock"
       components: "V" | "S" | "M" | "VS" | "VM" | "SM" | "VSM"
       resets_on: "short" | "short-long" | "long"
-      resource_types: "once" | "proficiency" | "lvl" | "attribute"
+      resource_types:
+        | "once"
+        | "proficiency"
+        | "lvl"
+        | "attribute"
+        | "table"
+        | "twice"
+        | "thrice"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -820,7 +833,15 @@ export const Constants = {
       "caster-types": ["full-caster", "half-caster", "subclass", "warlock"],
       components: ["V", "S", "M", "VS", "VM", "SM", "VSM"],
       resets_on: ["short", "short-long", "long"],
-      resource_types: ["once", "proficiency", "lvl", "attribute"],
+      resource_types: [
+        "once",
+        "proficiency",
+        "lvl",
+        "attribute",
+        "table",
+        "twice",
+        "thrice",
+      ],
     },
   },
 } as const

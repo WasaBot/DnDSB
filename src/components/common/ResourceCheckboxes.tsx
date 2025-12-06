@@ -20,7 +20,7 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
     children,
     toggleChildren,
 }) => {
-    const { resetTrigger } = useResources();
+    const { resetTrigger, restType } = useResources();
     const storageKey = `resource_${resourceName
         .toLowerCase()
         .replace(/\s+/g, "_")}_${characterId}`;
@@ -35,18 +35,15 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
     });
     const [childrenVisible,setChildrenVisible] = React.useState<boolean>(false);
 
-    // Update localStorage when usedResources changes
     useEffect(() => {
         try {
             localStorage.setItem(storageKey, JSON.stringify(usedResources));
         } catch {}
     }, [usedResources, storageKey]);
 
-    // Update array length when maxAmount changes
     useEffect(() => {
         setUsedResources((prev) => {
             const newArray = Array(maxAmount).fill(false);
-            // Preserve existing state up to the new length
             for (let i = 0; i < Math.min(prev.length, maxAmount); i++) {
                 newArray[i] = prev[i];
             }
@@ -54,12 +51,21 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
         });
     }, [maxAmount]);
 
-    // Reset resources when reset is triggered
     useEffect(() => {
-        if (resetTrigger > 0) {
-            setUsedResources(Array(maxAmount).fill(false));
+        if (resetTrigger > 0 && restType) {
+            let shouldReset = false;
+            if (resetsOn === "short" && restType === "short") {
+                shouldReset = true;
+            } else if (resetsOn === "long" && restType === "long") {
+                shouldReset = true;
+            } else if (resetsOn === "short-long" && (restType === "short" || restType === "long")) {
+                shouldReset = true;
+            }            
+            if (shouldReset) {
+                setUsedResources(Array(maxAmount).fill(false));
+            }
         }
-    }, [resetTrigger, maxAmount]);
+    }, [resetTrigger, restType, maxAmount, resetsOn]);
 
     const handleToggle = (index: number) => {
         setUsedResources((prev) => {
@@ -79,13 +85,6 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
                 <span className="resource-counter">
                     {usedCount}/{maxAmount} used
                 </span>
-                {resetsOn && (
-                    <span className="resource-reset-info">
-                        (Resets on{" "}
-                        {resetsOn === "short-long" ? "short or long" : resetsOn}{" "}
-                        rest)
-                    </span>
-                )}
             </div>
 
             <div className="resource-checkboxes-container">

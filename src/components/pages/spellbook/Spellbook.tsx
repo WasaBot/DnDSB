@@ -30,6 +30,49 @@ const Spellbook: React.FC = () => {
     const [spellAdditionalDesc, setSpellAdditionalDesc] = useState<string[] | null>(null);
     const suggestionsRef = useRef<HTMLUListElement>(null);
 
+    const renderFormattedText = (text: string) => {
+        const parts = text.split(/(\*\*\*.*?\*\*\*)/g);
+        
+        return parts.map((part, index) => {
+            if (part.startsWith('***') && part.endsWith('***')) {
+                const boldText = part.slice(3, -3);
+                return <b key={index}>{boldText}</b>;
+            }
+            return part;
+        });
+    };
+    
+    const renderAdditionalDescriptions = (descriptions: string[]) => {
+        const hasListItems = descriptions.some(desc => desc.trim().startsWith('-'));
+        
+        if (hasListItems) {
+            return (
+                <ul style={{ marginTop: "4px", paddingLeft: "20px" }}>
+                    {descriptions.map((desc, index) => {
+                        const cleanDesc = desc.trim().startsWith('-') 
+                            ? desc.trim().substring(1).trim() 
+                            : desc.trim();
+                        return (
+                            <li key={index} style={{ marginBottom: "4px" }}>
+                                {renderFormattedText(cleanDesc)}
+                            </li>
+                        );
+                    })}
+                </ul>
+            );
+        } else {
+            return (
+                <div>
+                    {descriptions.map((desc, index) => (
+                        <p key={index} style={{ marginTop: "4px", marginBottom: "4px" }}>
+                            {renderFormattedText(desc)}
+                        </p>
+                    ))}
+                </div>
+            );
+        }
+    };
+
     const usesKnownSpells = () => {
         const className = character.class.name.toLowerCase();
         return ['wizard', 'cleric', 'druid'].includes(className);
@@ -75,14 +118,9 @@ const Spellbook: React.FC = () => {
         });
     };
 
-    const handleMoveToPrepared = async (spellIndex: string, _spellName: string) => {
-        // Move from known spells to always remembered
-        toggleAlwaysRememberedSpell(character.id, spellIndex);
-        // Remove from known spells
+    const handleMoveToPrepared = async (spellIndex: string, _spellName: string) => {        
+        handleToggleCharacterSpell(spellIndex);
         handleToggleKnownSpell(spellIndex);
-        // Reload both lists
-        await loadAlwaysPreparedSpells();
-        await loadPreparedSpells();
     };
 
     const getAlwaysPreparedSpellNames = () => {
@@ -95,7 +133,6 @@ const Spellbook: React.FC = () => {
 
     const handleAlwaysRememberedToggle = async (spellIndex: string) => {
         toggleAlwaysRememberedSpell(character.id, spellIndex);
-        // Reload always prepared spells to reflect changes
         await loadAlwaysPreparedSpells();
         await loadPreparedSpells();
     };
@@ -106,33 +143,9 @@ const Spellbook: React.FC = () => {
         await loadPreparedSpells();
     };
 
-    const handleMovePreparedToKnown = async (spellIndex: string, spellName: string) => {
-        if (confirm(`Move "${spellName}" back to known spells?`)) {
-            // Remove from character spells (prepared)
-            handleToggleCharacterSpell(spellIndex);
-            // Add to known spells
-            handleToggleKnownSpell(spellIndex);
-            // No need to reload prepared spells since they update automatically
-        }
-    };
-
-    const handleDeletePreparedSpell = async (spellIndex: string, spellName: string) => {
-        if (confirm(`Delete "${spellName}" completely? This will remove it from all lists.`)) {
-            // Remove from character spells (prepared)
-            if (character.spellIndices?.includes(spellIndex)) {
-                handleToggleCharacterSpell(spellIndex);
-            }
-            // Remove from known spells if present
-            if (character.knownSpellIndices?.includes(spellIndex)) {
-                handleToggleKnownSpell(spellIndex);
-            }
-            // Remove from always remembered if present
-            if (getAlwaysRememberedSpells(character.id).includes(spellIndex)) {
-                toggleAlwaysRememberedSpell(character.id, spellIndex);
-                await loadAlwaysPreparedSpells();
-                await loadPreparedSpells();
-            }
-        }
+    const handleMovePreparedToKnown = async (spellIndex: string) => {    
+        handleToggleCharacterSpell(spellIndex);
+        handleToggleKnownSpell(spellIndex);
     };
 
     useEffect(() => {
@@ -207,12 +220,10 @@ const Spellbook: React.FC = () => {
         setKnownSpells(knownSpellsData);
     };
 
-    // Load always prepared spells when character changes
     useEffect(() => {
         loadAlwaysPreparedSpells();
     }, [character.level, character.class.name, character.class.subclass?.name, character.id]);
 
-    // Load prepared spells when always prepared indices change
     useEffect(() => {
         if (alwaysPreparedSpellIndices.length > 0) {
             loadPreparedSpells();
@@ -221,7 +232,6 @@ const Spellbook: React.FC = () => {
         }
     }, [alwaysPreparedSpellIndices]);
 
-    // Load character spells when character.spellIndices changes
     useEffect(() => {
         if (character.spellIndices && character.spellIndices.length > 0) {
             loadCharacterSpells();
@@ -230,7 +240,6 @@ const Spellbook: React.FC = () => {
         }
     }, [character.spellIndices]);
 
-    // Load known spells when character.knownSpellIndices changes
     useEffect(() => {
         if (usesKnownSpells() && character.knownSpellIndices && character.knownSpellIndices.length > 0) {
             loadKnownSpells();
@@ -255,7 +264,6 @@ const Spellbook: React.FC = () => {
         setLoading(false);
     };
 
-    // Remove spell from character's spell list
     const handleRemoveCharacterSpell = (spellIndex: string) => {
         setCharacter((prev) => {
             const spellIndices: string[] = Array.isArray(prev.spellIndices)
@@ -270,7 +278,6 @@ const Spellbook: React.FC = () => {
         });
     };
 
-    // Handle click outside suggestions to close dropdown
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -396,7 +403,6 @@ const Spellbook: React.FC = () => {
                                 No spells added yet.
                             </div>
                         ) : (
-                            /* Group character spells by level */
                             groupAndSortSpells(characterSpells) &&
                             Object.entries(groupAndSortSpells(characterSpells))
                                 .sort(([a], [b]) => Number(a) - Number(b))
@@ -410,7 +416,6 @@ const Spellbook: React.FC = () => {
                                         spellSlots={null}
                                         onRemoveSpell={handleRemoveCharacterSpell}
                                         onMoveToKnown={handleMovePreparedToKnown}
-                                        onDeleteSpell={handleDeletePreparedSpell}
                                         usesKnownSpells={usesKnownSpells()}
                                     />
                                 ))
@@ -434,7 +439,6 @@ const Spellbook: React.FC = () => {
                 </button>
                 {showPreparedSpells && alwaysPreparedSpellIndices.length > 0 && (
                     <div style={{ marginTop: '8px' }}>
-                        {/* Group spells by level */}
                         {Array.from(new Set(preparedSpells.map(spell => spell.level)))
                             .sort((a, b) => a - b)
                             .map(level => {
@@ -451,7 +455,6 @@ const Spellbook: React.FC = () => {
                                     />
                                 );
                             })}
-                        {/* Show manually added always remembered spells with remove option */}
                         <div style={{ marginTop: '12px' }}>
                             <h5 style={{ margin: '0 0 8px 0', color: '#2e7d32' }}>Manually Added:</h5>
                             <ul className="spellbook-myspells-list">
@@ -513,7 +516,6 @@ const Spellbook: React.FC = () => {
                                     No known spells yet. Add spells using the search below.
                                 </div>
                             ) : (
-                                /* Group known spells by level */
                                 groupAndSortSpells(knownSpells) &&
                                 Object.entries(groupAndSortSpells(knownSpells))
                                     .sort(([a], [b]) => Number(a) - Number(b))
@@ -563,7 +565,6 @@ const Spellbook: React.FC = () => {
                             filteredSuggestions.length > 0
                         ) {
                             e.preventDefault();
-                            // Focus first suggestion (could be enhanced further with keyboard navigation)
                         }
                     }}
                 />
@@ -643,8 +644,11 @@ const Spellbook: React.FC = () => {
                     {spell.duration && <p>Duration: {spell.concentration ? 'Concentration, ':''} {spell.duration}</p>}
                     {spell.damageType && <div>Damage: {spellDamage} {mapDamageTypeIcons(spell.damageType)}</div>}
                     <p>{spell.desc}</p>
-                    {spell.additionalDesc && <div>{spellAdditionalDesc}</div>//TODO: hier noch listen und fett formatieren
-                    }
+                    {spell.additionalDesc && spellAdditionalDesc && (
+                        <div style={{ marginTop: "8px" }}>
+                            {renderAdditionalDescriptions(spellAdditionalDesc)}
+                        </div>
+                    )}
                     {spell.atHigherLevel && <p>At Higher Levels: {spell.atHigherLevel}</p>}
                     <SpellTable 
                         spellIndex={spell.index}

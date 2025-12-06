@@ -10,7 +10,6 @@ interface SpellItemProps {
     onRemoveSpell?: (spellIndex: string, spellName: string) => void;
     onMoveToPrepared?: (spellIndex: string, spellName: string) => void;
     onMoveToKnown?: (spellIndex: string, spellName: string) => void;
-    onDeleteSpell?: (spellIndex: string, spellName: string) => void;
     usesKnownSpells?: boolean;
 }
 
@@ -19,7 +18,6 @@ const SpellItem: React.FC<SpellItemProps> = ({
     onRemoveSpell,
     onMoveToPrepared,
     onMoveToKnown,
-    onDeleteSpell,
     usesKnownSpells = false,
 }) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -311,27 +309,6 @@ const SpellItem: React.FC<SpellItemProps> = ({
                             title="Move back to known spells"
                         >
                             ← To Known
-                        </button>
-                    )}
-                    {onDeleteSpell && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteSpell(spell.index, spell.name);
-                            }}
-                            style={{
-                                background: '#ffebee',
-                                border: '1px solid #e57373',
-                                borderRadius: '4px',
-                                color: '#c62828',
-                                padding: '2px 6px',
-                                fontSize: '12px',
-                                cursor: 'pointer'
-                            }}
-                            title="Delete spell completely"
-                        >
-                            🗑️ Delete
                         </button>
                     )}
                     {onRemoveSpell && (

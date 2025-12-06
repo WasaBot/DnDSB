@@ -11,7 +11,6 @@ interface SpelllistProps {
   onRemoveSpell?: (spellIndex: string, spellName: string) => void;
   onMoveToPrepared?: (spellIndex: string, spellName: string) => void;
   onMoveToKnown?: (spellIndex: string, spellName: string) => void;
-  onDeleteSpell?: (spellIndex: string, spellName: string) => void;
   usesKnownSpells?: boolean;
 }
 
@@ -24,7 +23,6 @@ const Spelllist: React.FC<SpelllistProps> = ({
     onRemoveSpell,
     onMoveToPrepared,
     onMoveToKnown,
-    onDeleteSpell,
     usesKnownSpells = false,
 }) => {
     const [openLevel, setOpenLevel] = useState<boolean>(false);
@@ -63,7 +61,6 @@ const Spelllist: React.FC<SpelllistProps> = ({
                             onRemoveSpell={onRemoveSpell}
                             onMoveToPrepared={onMoveToPrepared}
                             onMoveToKnown={onMoveToKnown}
-                            onDeleteSpell={onDeleteSpell}
                             usesKnownSpells={usesKnownSpells}
                         />
                     ))}

@@ -1,6 +1,6 @@
 import { getCasterType } from "./functions";
 import supabase from "./supabase";
-import type { Character, Spell } from "./types/types";
+import type { Character, ClassName, Spell } from "./types/types";
 
 export async function fetchSpellslots(character: Character): Promise<any | string> {
     if (!character.class.name || !character.level) 
@@ -55,9 +55,6 @@ export async function fetchSpellsByIndices(spellIndices: string[]): Promise<Reco
     return spellRecord;
 }
 
-/**
- * Fetch subclass-based always prepared spells for a character
- */
 export async function fetchSubclassPreparedSpells(subclassIndex: string, characterLevel: number, landType?: string): Promise<string[]> {
     let query = supabase
         .from('subclass_prepared_spells')
@@ -73,20 +70,16 @@ export async function fetchSubclassPreparedSpells(subclassIndex: string, charact
     }
     
     if (!data) return [];
-    
-    // Filter results based on land type for Circle of the Land druids
-    const filteredData = data.filter(row => {
-        // If no subclass_special, include it (applies to all land types)
+        
+    const filteredData = data.filter(row => {        
         if (!row.subclass_special) {
             return true;
         }
-        
-        // If landType is provided and subclass_special contains land types, check if it matches
+                
         if (landType && Array.isArray(row.subclass_special)) {
             return row.subclass_special.includes(landType);
         }
-        
-        // If no landType provided but subclass_special exists, exclude it (land-specific spells)
+                
         return false;
     });
     
@@ -139,4 +132,28 @@ export async function fetchSpellAdditionalDesc(spellIndex: string): Promise<stri
         return [];
     }
     return data ? data.desc : [];
+}
+export async function fetchClassRessource(characterClass: ClassName,characterLevel: number, characterSubclass?: string): Promise<any[] | null> {
+    if(characterSubclass){
+        const subclass = characterSubclass.toLowerCase().replace(/\s+/g, '-');
+        const { data, error} = await supabase
+            .from('class_resources')
+            .select('resource_index,resources(name), lvl, resets_on, type, resource_table(uses)')
+            .eq('class_index', characterClass.toLocaleLowerCase()).lte('lvl', characterLevel).or('subclass_index.eq.'+subclass+',subclass_index.is.null');
+        if (error) {
+            console.error('Error fetching class resources:', error.message);
+            return null;
+        }
+        return data ? data : null;
+    } else {
+        const { data, error} = await supabase
+            .from('class_resources')
+            .select('resource_index,resources(name), lvl, resets_on, type, resource_table(uses)')
+            .eq('class_index', characterClass.toLocaleLowerCase()).lte('lvl', characterLevel);
+        if (error) {
+            console.error('Error fetching class resources:', error.message);
+            return null;
+        }
+        return data ? data : null;
+    }
 }

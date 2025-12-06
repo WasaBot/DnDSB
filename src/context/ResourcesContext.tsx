@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 interface ResourcesContextType {
   resetTrigger: number;
   triggerReset: (restType: "short" | "long") => void;
+  restType?: "short" | "long";
 }
 
 const ResourcesContext = createContext<ResourcesContextType | undefined>(undefined);
