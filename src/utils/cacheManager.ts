@@ -72,7 +72,6 @@ export class CacheManager {
     
     try {
       await caches.delete('supabase-api-v2');
-      console.log('Supabase cache cleared');
     } catch (error) {
       console.error('Failed to clear Supabase cache:', error);
     }
@@ -95,9 +94,7 @@ export class CacheManager {
       
       await Promise.all(
         tableRequests.map(request => cache.delete(request))
-      );
-      
-      console.log(`Cache cleared for table: ${tableName}`);
+      );      
     } catch (error) {
       console.error(`Failed to refresh table ${tableName}:`, error);
     }

@@ -10,14 +10,15 @@ const ResourcesContext = createContext<ResourcesContextType | undefined>(undefin
 
 export const ResourcesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [restType, setRestType] = useState<"short" | "long" | undefined>(undefined);
 
-  const triggerReset = (restType: "short" | "long") => {
-    console.log(`Triggering resource reset for a ${restType} rest.`);
+  const triggerReset = (type: "short" | "long") => {
+    setRestType(type);
     setResetTrigger(prev => prev + 1);
   };
 
   return (
-    <ResourcesContext.Provider value={{ resetTrigger, triggerReset }}>
+    <ResourcesContext.Provider value={{ resetTrigger, triggerReset, restType }}>
       {children}
     </ResourcesContext.Provider>
   );

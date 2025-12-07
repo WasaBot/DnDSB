@@ -25,6 +25,7 @@ const SpellItem: React.FC<SpellItemProps> = ({
     const [damageAtCharLevel, setDamageAtCharLevel] = useState<any | null>(null);
     const [damageAtSpellLevel, setDamageAtSpellLevel] = useState<{[key: number]: string} | null>(null);
     const [healingAtSpellLevel, setHealingAtSpellLevel] = useState<{[key: number]: string} | null>(null);
+    const [showAdditionalDesc, setShowAdditionalDesc] = useState<boolean>(false);
     const { character } = useSettings();
 
     const renderFormattedText = (text: string) => {
@@ -339,9 +340,15 @@ const SpellItem: React.FC<SpellItemProps> = ({
             </div>
             {isOpen && (
                 <div className="charactersheet-spell-details">
-                    {spell.components} | {spell.material && `Material: ${spell.material}`}<br />
-                    <i>{spell.desc}</i>
-                    {spell.additionalDesc && additionalDesc && (
+                    {spell.components} | {spell.material && `Material: ${spell.material}`}<br /><br />
+                    <div onClick={() => setShowAdditionalDesc(!showAdditionalDesc)}>
+                        {spell.desc}
+                        {additionalDesc && (<p style={{ textDecoration: 'underline', cursor: 'pointer'}}>
+                            {showAdditionalDesc ? 'Hide details' : 'Show details'}
+                        </p>
+                        )}
+                    </div>
+                    {spell.additionalDesc && additionalDesc && showAdditionalDesc && (
                         <div style={{ marginTop: "8px" }}>
                             {renderAdditionalDescriptions(additionalDesc)}
                         </div>

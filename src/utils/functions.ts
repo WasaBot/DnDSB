@@ -33,9 +33,6 @@ export interface ResourceInfo {
     resetsOn: "short" | "short-long" | "long";
 }
 
-/**
- * Calculate the number of resource uses based on the resource type and character stats
- */
 export function calculateResourceAmount(
     resourceInfo: ResourceInfo,
     character: any
@@ -45,22 +42,19 @@ export function calculateResourceAmount(
             return 1;
 
         case "proficiency":
-            // Proficiency bonus based on character level
             return Math.ceil(character.level / 4) + 1;
 
         case "lvl":
             return character.level;
 
         case "attribute":
-            // This would need additional logic to determine which attribute
-            // For now, return a default based on spellcasting ability
             const spellcastingAttr = character.class.spellcastingAbility;
             if (spellcastingAttr) {
                 const attrValue =
                     character.attributes[
                         spellcastingAttr as keyof typeof character.attributes
                     ];
-                return Math.floor((attrValue - 10) / 2); // Attribute modifier
+                return Math.floor((attrValue - 10) / 2);
             }
             return 0;
 
@@ -69,16 +63,9 @@ export function calculateResourceAmount(
     }
 }
 
-/**
- * Reset all character resources that reset on the specified rest type
- */
 export function resetCharacterResources(
     characterId: string,
-    restType: "short" | "long"
 ) {
-    console.log(`Triggering resource reset for a ${restType} rest.`);
-    // Get all localStorage keys for this character's resources
-    // TODO: Use restType to filter which resources reset on short vs long rest
     const resourceKeys = Object.keys(localStorage).filter(
         (key) => key.startsWith(`resource_`) && key.endsWith(`_${characterId}`)
     );
@@ -89,14 +76,11 @@ export function resetCharacterResources(
             if (resourceData) {
                 const parsedData = JSON.parse(resourceData);
                 if (Array.isArray(parsedData)) {
-                    // Reset the resource array to all false
                     const resetArray = parsedData.map(() => false);
                     localStorage.setItem(key, JSON.stringify(resetArray));
                 }
             }
-        } catch {
-            // Ignore parsing errors
-        }
+        } catch {}
     });
 }
 
@@ -142,12 +126,10 @@ export function generateCharacterId(
     className: string,
     subclass?: string
 ): string {
-    // Clean the strings by removing spaces and special characters, converting to lowercase
     const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, "");
     const cleanClass = className.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const cleanSubclass = subclass ? subclass.toLowerCase() : "";
+    const cleanSubclass = subclass ? subclass.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
 
-    // Create the ID
     if (cleanSubclass) {
         return `${cleanName}_${cleanClass}_${cleanSubclass}`;
     } else {
@@ -155,9 +137,6 @@ export function generateCharacterId(
     }
 }
 
-/**
- * Get always prepared spells for a character based on class, subclass, and level
- */
 export async function getAlwaysPreparedSpells(
     character: Character
 ): Promise<string[]> {
@@ -218,9 +197,6 @@ export function getAlwaysRememberedSpells(characterId: string): string[] {
     }
 }
 
-/**
- * Check if a spell is always remembered for a character
- */
 export function isSpellAlwaysRemembered(
     characterId: string,
     spellIndex: string

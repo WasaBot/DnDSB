@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useResources } from "../../context/ResourcesContext";
+import "./ResourceCheckboxes.css";
 
 interface ResourceCheckboxesProps {
     resourceName: string;
@@ -16,7 +17,6 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
     maxAmount,
     characterId,
     resetsOn = "long",
-    className = "",
     children,
     toggleChildren,
 }) => {
@@ -79,7 +79,7 @@ const ResourceCheckboxes: React.FC<ResourceCheckboxesProps> = ({
     const usedCount = usedResources.filter(Boolean).length;
 
     return (
-        <div className={`resource-checkboxes ${className}`}>
+        <div className={`resource-checkboxes`}>
             <div className="resource-header">
                 <h4>{resourceName}</h4>
                 <span className="resource-counter">

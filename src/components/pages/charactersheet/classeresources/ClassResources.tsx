@@ -13,7 +13,6 @@ const ClassResources: React.FC = () => {
             try {
                 const fetchedResources = await fetchClassRessource(character.class.name, character.level, character.class.subclass?.name);        
                 setCharResources(fetchedResources);
-                console.log("Fetched resources:", fetchedResources);
             } catch (error) {
                 setCharResources(null);
             }
@@ -59,14 +58,18 @@ const ClassResources: React.FC = () => {
     return (
         <div>
             <h3>{character.class.name} Resources</h3>
-            {charResources && charResources.length > 0 && charResources.map(resource => (
-            <ResourceCheckboxes
-                key={resource.resource_index}
-                resourceName={resource.resources.name}
-                maxAmount={getMaxResourceAmount(resource.type, resource.type === 'table' ? resource.resource_table.uses : [])}
-                characterId={character.id}
-                resetsOn={resource.resets_on}
-            />))}
+            {charResources && charResources.length > 0 && charResources.map(resource => {
+                const resetsOn = resource.resets_on as "short" | "short-long" | "long" | undefined;
+                return (
+                    <ResourceCheckboxes
+                        key={resource.resource_index}
+                        resourceName={resource.resources.name}
+                        maxAmount={getMaxResourceAmount(resource.type, resource.type === 'table' ? resource.resource_table.uses : [])}
+                        characterId={character.id}
+                        resetsOn={resetsOn || "long"}
+                    />
+                );
+            })}
         </div>
     );
 };
