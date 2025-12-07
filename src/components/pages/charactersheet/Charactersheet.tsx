@@ -14,13 +14,9 @@ const CharacterSheet: React.FC = () => {
     const { character } = useSettings();
     const { triggerReset } = useResources();
 
-    const handleLongRest = () => {
-        resetCharacterResources(character.id, "long");
-        triggerReset("long");
-    };
-    const handleShortRest = () => {
-        resetCharacterResources(character.id, "short");
-        triggerReset("short");
+    const handleRest = (type: "short" | "long") => {
+        resetCharacterResources(character.id);
+        triggerReset(type);
     };
 
     return (
@@ -80,8 +76,8 @@ const CharacterSheet: React.FC = () => {
             </div>
 
             <RestButtons
-                handleLongRest={handleLongRest}
-                handleShortRest={handleShortRest}
+                handleLongRest={() => handleRest("long")}
+                handleShortRest={() => handleRest("short")}
             />
         </>
     );
