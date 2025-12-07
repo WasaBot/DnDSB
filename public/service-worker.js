@@ -1,10 +1,11 @@
-const CACHE_NAME = 'dnd-spellbook-v2';
-const SUPABASE_CACHE = 'supabase-api-v2';
+// Derive a version string from the service worker URL (query param ?v=...) to bust caches on new deployments
+const SW_VERSION = new URL(self.location.href).searchParams.get('v') || 'default';
+const CACHE_NAME = `dnd-spellbook-v2-${SW_VERSION}`;
+const SUPABASE_CACHE = `supabase-api-v2`;
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/service-worker.js'
+  '/manifest.json'
 ];
 
 // Cache strategies for different types of data
@@ -50,10 +51,13 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
-      const validCaches = [CACHE_NAME, SUPABASE_CACHE];
       return Promise.all(
         keys
-          .filter(key => !validCaches.includes(key))
+          .filter(key => {
+            if (key === CACHE_NAME || key === SUPABASE_CACHE) return false;
+            if (key.startsWith('dnd-spellbook-v2-')) return true;
+            return false;
+          })
           .map(key => {
             console.log('Deleting old cache:', key);
             return caches.delete(key);
@@ -92,20 +96,44 @@ async function handleSupabaseRequest(event) {
   const table = getTableFromUrl(url);
   const strategy = getCacheStrategy(table);
 
-  // Don't cache non-GET requests or real-time data
-  if (request.method !== 'GET' || strategy === 'NO_CACHE') {
-    return fetch(request);
-  }
-
   const cache = await caches.open(SUPABASE_CACHE);
   const cached = await cache.match(request);
 
-  // Cache-first strategy: return cached data immediately if available
+  if (request.method !== 'GET') {
+    try {
+      return await fetch(request);
+    } catch (error) {
+      if (cached) return cached;
+      throw error;
+    }
+  }
+
+  if (strategy === 'NO_CACHE') {
+    try {
+      const response = await fetch(request);
+      if (response.ok) {
+        const responseToCache = response.clone();
+        const headers = new Headers(responseToCache.headers);
+        headers.set('sw-cache-time', Date.now().toString());
+        
+        const cachedResponse = new Response(responseToCache.body, {
+          status: responseToCache.status,
+          statusText: responseToCache.statusText,
+          headers: headers
+        });
+        
+        cache.put(request, cachedResponse);
+      }
+      return response;
+    } catch (error) {
+      if (cached) return cached;
+      throw error;
+    }
+  }
+  
   if (cached) {  
-    // Update cache in background if expired
     const cacheTime = cached.headers.get('sw-cache-time');
     if (cacheTime && isExpired(parseInt(cacheTime), strategy)) {
-      // Background update - don't wait for it
       fetch(request).then(response => {
         if (response.ok) {
           const responseToCache = response.clone();
@@ -128,12 +156,10 @@ async function handleSupabaseRequest(event) {
     return cached;
   }
 
-  // No cache available, fetch from network
   try {
     const response = await fetch(request);
     
     if (response.ok) {
-      // Clone the response and add cache timestamp
       const responseToCache = response.clone();
       const headers = new Headers(responseToCache.headers);
       headers.set('sw-cache-time', Date.now().toString());
@@ -149,61 +175,71 @@ async function handleSupabaseRequest(event) {
     
     return response;
   } catch (error) {
-    console.error('Network request failed:', error);
+    console.error('Network request failed for', table, ':', error);
+    console.log('Attempting to serve from cache for offline access');
     
-    // Return offline response for critical data
-    if (strategy === 'LONG_TERM') {
-      return new Response(JSON.stringify({ 
-        error: "Offline and not cached",
-        offline: true,
-        table: table
-      }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" }
-      });
+    const fallbackCache = await cache.match(request);
+    if (fallbackCache) {
+      console.log('Serving stale cache for', table, 'while offline');
+      return fallbackCache;
     }
     
-    throw error;
+    console.error('No cached data available for', table, 'while offline');
+    return new Response(JSON.stringify({ 
+      error: "Offline and not cached",
+      offline: true,
+      table: table
+    }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
 
 self.addEventListener('fetch', event => {
   const url = event.request.url;
   
-  // Handle Supabase API requests
   if (isSupabaseRequest(url)) {
     event.respondWith(handleSupabaseRequest(event));
     return;
   }
   
-  // Handle static assets
   event.respondWith(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.match(event.request).then(response => {
-        if (response) {
-          return response;
+    caches.open(CACHE_NAME).then(async cache => {
+      let response = await cache.match(event.request);
+      
+      if (response) {
+        return response;
+      }
+      
+      if (event.request.mode === 'navigate') {
+        const indexResponse = await cache.match('/index.html') || await cache.match('/');
+        if (indexResponse) {
+          return indexResponse;
         }
-        // If not in cache, fetch from network and cache it
-        return fetch(event.request).then(networkResponse => {
-          // Only cache successful responses for static assets
-          if (networkResponse.ok && STATIC_ASSETS.some(asset => 
-            event.request.url.endsWith(asset) || 
-            (asset === '/' && event.request.url === self.location.origin + '/')
-          )) {
-            cache.put(event.request, networkResponse.clone());
+      }
+      
+      try {
+        const networkResponse = await fetch(event.request);
+        if (networkResponse.ok) {
+          cache.put(event.request, networkResponse.clone());
+        }
+        return networkResponse;
+      } catch (error) {
+        console.error('Failed to fetch:', event.request.url, error);
+        
+        if (event.request.mode === 'navigate') {
+          const indexResponse = await cache.match('/index.html') || await cache.match('/');
+          if (indexResponse) {
+            return indexResponse;
           }
-          return networkResponse;
-        }).catch(error => {
-          console.error('Failed to fetch static asset:', event.request.url, error);
-          // Return a basic offline response for navigation requests
-          if (event.request.mode === 'navigate') {
-            return new Response('<!DOCTYPE html><html><body><h1>Offline</h1><p>This app works offline, but this page is not cached.</p></body></html>', {
-              headers: { 'Content-Type': 'text/html' }
-            });
-          }
-          throw error;
-        });
-      });
+          return new Response('<!DOCTYPE html><html><body><h1>Offline</h1><p>App is offline and page not cached.</p></body></html>', {
+            headers: { 'Content-Type': 'text/html' }
+          });
+        }
+        
+        throw error;
+      }
     })
   );
 });

@@ -13,13 +13,14 @@ type Config = {
 
 export function register(config?: Config) {
   if ('serviceWorker' in navigator) {
+    const swVersion = import.meta.env.VITE_APP_VERSION || Date.now().toString();
     const publicUrl = new URL(import.meta.env.BASE_URL, window.location.href);
     if (publicUrl.origin !== window.location.origin) {
       return;
     }
 
     window.addEventListener('load', () => {
-      const swUrl = `${import.meta.env.BASE_URL}service-worker.js`;
+      const swUrl = `${import.meta.env.BASE_URL}service-worker.js?v=${swVersion}`;
 
       if (isLocalhost) {
         checkValidServiceWorker(swUrl, config);
