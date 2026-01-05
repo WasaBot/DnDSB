@@ -9,7 +9,7 @@ const FT_TO_M = 0.3;
 
 const convertRange = (range: string, unit: UnitType): string => {
     if (unit === "ft") return range;    
-    return range.replace(/(\d+)(?:\s*-?\s*)(?:feet|foot|ft)/gi, (match, num) => {
+    return range.replace(/(\d+)(?:\s*-?\s*)(?:feet|foot|ft)/gi, (_match, num) => {
         const feet = parseInt(num, 10);
         const meters = Math.round(feet * FT_TO_M);
         return `${meters} m`;
