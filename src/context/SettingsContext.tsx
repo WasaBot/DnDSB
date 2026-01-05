@@ -31,23 +31,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     level: 1,
   });
 
-  // Save unit to localStorage when it changes
   React.useEffect(() => {
     try {
       localStorage.setItem('dndsb_unit', JSON.stringify(unit));
-    } catch {
-      // Ignore localStorage errors
-    }
+    } catch {}
   }, [unit]);
 
-
-
-  // Auto-generate character ID when name or class changes (but avoid infinite loops)
   React.useEffect(() => {
     const newId = generateCharacterId(character.name, character.class.name, character.class.subclass?.id);
     if (character.id !== newId) {
       setCharacter(prev => {
-        // Only update if the ID actually needs to change to avoid loops
         if (prev.id !== newId) {
           return {
             ...prev,
@@ -68,7 +61,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const data = JSON.parse(decoded);
           if (data.character) setCharacter(data.character);
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.error("Failed to import character from URL.", error);
         }
       }

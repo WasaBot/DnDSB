@@ -1,9 +1,25 @@
 import { useState, useEffect } from "react";
-import type { Spell } from "../../../utils/types/types";
+import type { Spell, UnitType } from "../../../utils/types/types";
 import { mapDamageTypeIcons } from "../../../utils/functions";
 import { fetchSpellAdditionalDesc, fetchDmgCharLvl, fetchSpellAtSlot } from "../../../utils/dbFuncs";
 import { useSettings } from "../../../context/SettingsContext";
 import SpellTable from "../spelltable/SpellTable";
+
+const FT_TO_M = 0.3;
+
+const convertRange = (range: string, unit: UnitType): string => {
+    if (unit === "ft") return range;    
+    return range.replace(/(\d+)(?:\s*-?\s*)(?:feet|foot|ft)/gi, (match, num) => {
+        const feet = parseInt(num, 10);
+        const meters = Math.round(feet * FT_TO_M);
+        return `${meters} m`;
+    });
+};
+
+const convertAoeSize = (aoeSize: number | undefined, unit: UnitType): number | undefined => {
+    if (!aoeSize || unit === "ft") return aoeSize;
+    return Math.round(aoeSize * FT_TO_M);
+};
 
 interface SpellItemProps {
     spell: Spell & { Prepared?: boolean };
@@ -26,7 +42,7 @@ const SpellItem: React.FC<SpellItemProps> = ({
     const [damageAtSpellLevel, setDamageAtSpellLevel] = useState<{[key: number]: string} | null>(null);
     const [healingAtSpellLevel, setHealingAtSpellLevel] = useState<{[key: number]: string} | null>(null);
     const [showAdditionalDesc, setShowAdditionalDesc] = useState<boolean>(false);
-    const { character } = useSettings();
+    const { character, unit } = useSettings();
 
     const renderFormattedText = (text: string) => {
         const parts = text.split(/(\*\*\*.*?\*\*\*)/g);
@@ -85,7 +101,7 @@ const SpellItem: React.FC<SpellItemProps> = ({
         }
 
         if (spell.range) {
-            infoItems.push(spell.range);
+            infoItems.push(convertRange(spell.range, unit));
         }
 
         if (spell.duration) {
@@ -340,7 +356,11 @@ const SpellItem: React.FC<SpellItemProps> = ({
             </div>
             {isOpen && (
                 <div className="charactersheet-spell-details">
-                    {spell.components} | {spell.material && `Material: ${spell.material}`}<br /><br />
+                    {spell.components} | {spell.material && `Material: ${spell.material}`}
+                    {spell.aoeSize && spell.aoeType && (
+                        <span> | AoE: {convertAoeSize(spell.aoeSize, unit)} {unit === "m" ? "m" : "ft"} {spell.aoeType}</span>
+                    )}
+                    <br /><br />
                     <div onClick={() => setShowAdditionalDesc(!showAdditionalDesc)}>
                         {spell.desc}
                         {additionalDesc && (<p style={{ textDecoration: 'underline', cursor: 'pointer'}}>

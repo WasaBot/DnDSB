@@ -70,10 +70,8 @@ const CharacterSheet: React.FC = () => {
             </div>
 
             <h2>Class Resources</h2>
-            <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                <Spellarea />
-                <ClassResources />
-            </div>
+            <Spellarea />
+            <ClassResources />
 
             <RestButtons
                 handleLongRest={() => handleRest("long")}
